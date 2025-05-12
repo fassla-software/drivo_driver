@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "643071460200",
+    "project_id": "drivo-41f2e",
+    "storage_bucket": "drivo-41f2e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:643071460200:android:4eaf4cb160a87e3bb9ccdd",
+        "android_client_info": {
+          "package_name": "com.devu.hwilo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnPQa_hpNZ5APrH9Albcm8lx3uHflHzx4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:643071460200:android:f5d323434205b0d4b9ccdd",
+        "android_client_info": {
+          "package_name": "com.drivo.hwilo_user"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnPQa_hpNZ5APrH9Albcm8lx3uHflHzx4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:643071460200:android:95003cff6ca7e5ddb9ccdd",
+        "android_client_info": {
+          "package_name": "com.drivoDriver.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnPQa_hpNZ5APrH9Albcm8lx3uHflHzx4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
