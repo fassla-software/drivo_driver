@@ -4,7 +4,7 @@ ThemeData lightTheme = ThemeData(
   fontFamily: 'SFProText',
   primaryColor: Color(0xFF211f20),
   disabledColor: const Color(0xFFBABFC4),
-  primaryColorDark: const Color(0xff14b162),
+  primaryColorDark: const Color.fromARGB(255, 118, 118, 118),
   scaffoldBackgroundColor: const Color.fromARGB(255, 255, 255, 255),
   brightness: Brightness.light,
   hintColor: const Color(0xFF9F9F9F),

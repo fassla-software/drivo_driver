@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/Users/osamagamil/Downloads/flutter/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/osamagamil/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/osamagamil/Documents/flutter_apps/drivo_driver/android/app/.cxx/RelWithDebInfo/365r2467/armeabi-v7a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/osamagamil/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/osamagamil/Documents/flutter_apps/drivo_driver/android/app/.cxx/RelWithDebInfo/365r2467/armeabi-v7a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}

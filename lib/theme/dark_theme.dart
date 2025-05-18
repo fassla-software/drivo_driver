@@ -7,7 +7,7 @@ ThemeData darkTheme = ThemeData(
   cardColor: const Color(0xFF242424),
   hintColor: const Color(0xFF9F9F9F),
   scaffoldBackgroundColor: const Color(0xff444444),
-  primaryColorDark: const Color(0xff14b162),
+  primaryColorDark: const Color.fromARGB(255, 118, 118, 118),
   colorScheme: const ColorScheme.dark(
     primary: Color(0xFF02B8A2),
     error: Color(0xFFFF6767),
