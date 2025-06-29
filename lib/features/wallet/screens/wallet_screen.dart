@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/features/wallet/widgets/income_statement_list_widget.dart';
@@ -17,7 +16,6 @@ import 'package:ride_sharing_user_app/features/wallet/widgets/wallet_money_amoun
 import 'package:ride_sharing_user_app/common_widgets/app_bar_widget.dart';
 import 'package:ride_sharing_user_app/common_widgets/zoom_drawer_context_widget.dart';
 import 'package:ride_sharing_user_app/common_widgets/type_button_widget.dart';
-
 
 class WalletScreenMenu extends GetView<ProfileController> {
   const WalletScreenMenu({super.key});
@@ -41,9 +39,6 @@ class WalletScreenMenu extends GetView<ProfileController> {
   }
 }
 
-
-
-
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
 
@@ -62,13 +57,13 @@ class _WalletScreenState extends State<WalletScreen> {
     Get.find<ProfileController>().getProfileInfo();
     Get.find<WalletController>().getLoyaltyPointList(1);
     Get.find<WalletController>().getWithdrawMethodInfoList(1);
-    Get.find<WalletController>().setSelectedHistoryIndex(1,false);
+    Get.find<WalletController>().setSelectedHistoryIndex(1, false);
     super.initState();
   }
+
   @override
   Widget build(BuildContext context) {
-
-    return Stack( children: [
+    return Stack(children: [
       Scaffold(
         resizeToAvoidBottomInset: false,
         body: CustomScrollView(controller: scrollController, slivers: [
@@ -80,184 +75,238 @@ class _WalletScreenState extends State<WalletScreen> {
               automaticallyImplyLeading: false,
               backgroundColor: Theme.of(context).highlightColor,
               flexibleSpace:
-              GetBuilder<WalletController>(builder: (walletController) {
+                  GetBuilder<WalletController>(builder: (walletController) {
                 return AppBarWidget(
                   title: 'my_wallet'.tr,
                   showBackButton: false,
-                  onTap: (){
-                  Get.find<ProfileController>().toggleDrawer();
+                  onTap: () {
+                    Get.find<ProfileController>().toggleDrawer();
                   },
                 );
-              })
-          ),
-
-          SliverToBoxAdapter(child: GetBuilder<WalletController>(builder: (walletController) {
-            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-               SizedBox(height: Get.height * 0.05),
-
-              walletController.walletTypeIndex != 2 ?
-              const WalletMoneyAmountWidget() :
-              Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-                child: Text(
-                  'income_statements'.tr,
-                  style: textBold.copyWith(
-                    color: Theme.of(context).textTheme.bodyMedium!.color,
-                    fontSize: Dimensions.fontSizeExtraLarge,
-                  ),
-                ),
-              ),
-
-              if(walletController.walletTypeIndex != 1)
-              GetBuilder<ProfileController>(builder: (profileController) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: Dimensions.paddingSizeDefault),
-                  child: SizedBox(height: 165,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      shrinkWrap: true,
-                      padding: EdgeInsets.zero,
-                      children: [
-                        if(walletController.walletTypeIndex == 0)...[
-                          GestureDetector(
-                            onTap: walletController.isLoading ? null : (){
-                              walletController.setSelectedHistoryIndex(1, true);
-                            },
-                            child: WalletAmountTypeCardWidget(icon: Images.pendingWithdrawn,
-                              amount: profileController.profileInfo?.wallet?.pendingBalance ?? 0,
-                              title: 'pending_withdrawn'.tr,
-                              haveBorderColor: walletController.selectedHistoryIndex == 1 ? true : false,
+              })),
+          SliverToBoxAdapter(
+              child: GetBuilder<WalletController>(builder: (walletController) {
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: Get.height * 0.05),
+                  walletController.walletTypeIndex != 2
+                      ? const WalletMoneyAmountWidget()
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: Dimensions.paddingSizeDefault),
+                          child: Text(
+                            'income_statements'.tr,
+                            style: textBold.copyWith(
+                              color:
+                                  Theme.of(context).textTheme.bodyMedium!.color,
+                              fontSize: Dimensions.fontSizeExtraLarge,
                             ),
                           ),
-
-                          GestureDetector(
-                            onTap: walletController.isLoading ? null : (){
-                              walletController.setSelectedHistoryIndex(2, true);
-                            },
-                            child: WalletAmountTypeCardWidget(icon: Images.allreadyWithdrawnIcon,
-                              amount: profileController.profileInfo?.wallet?.totalWithdrawn ?? 0,
-                              title: 'already_withdrawn'.tr,
-                              haveBorderColor: walletController.selectedHistoryIndex == 2 ? true : false,
-                            ),
+                        ),
+                  if (walletController.walletTypeIndex != 1)
+                    GetBuilder<ProfileController>(builder: (profileController) {
+                      return Padding(
+                        padding: const EdgeInsets.only(
+                            right: Dimensions.paddingSizeDefault),
+                        child: SizedBox(
+                          height: 165,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            children: [
+                              if (walletController.walletTypeIndex == 0) ...[
+                                GestureDetector(
+                                  onTap: walletController.isLoading
+                                      ? null
+                                      : () {
+                                          walletController
+                                              .setSelectedHistoryIndex(1, true);
+                                        },
+                                  child: WalletAmountTypeCardWidget(
+                                    icon: Images.pendingWithdrawn,
+                                    amount: profileController.profileInfo
+                                            ?.wallet?.pendingBalance ??
+                                        0,
+                                    title: 'pending_withdrawn'.tr,
+                                    haveBorderColor:
+                                        walletController.selectedHistoryIndex ==
+                                                1
+                                            ? true
+                                            : false,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: walletController.isLoading
+                                      ? null
+                                      : () {
+                                          walletController
+                                              .setSelectedHistoryIndex(2, true);
+                                        },
+                                  child: WalletAmountTypeCardWidget(
+                                    icon: Images.allreadyWithdrawnIcon,
+                                    amount: profileController.profileInfo
+                                            ?.wallet?.totalWithdrawn ??
+                                        0,
+                                    title: 'already_withdrawn'.tr,
+                                    haveBorderColor:
+                                        walletController.selectedHistoryIndex ==
+                                                2
+                                            ? true
+                                            : false,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: walletController.isLoading
+                                      ? null
+                                      : () {
+                                          walletController
+                                              .setSelectedHistoryIndex(3, true);
+                                        },
+                                  child: WalletAmountTypeCardWidget(
+                                    icon: Images.paidBalanceIcon,
+                                    amount: profileController
+                                            .profileInfo?.paidAmount ??
+                                        0,
+                                    title: 'paid_amount'.tr,
+                                    haveBorderColor:
+                                        walletController.selectedHistoryIndex ==
+                                                3
+                                            ? true
+                                            : false,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: walletController.isLoading
+                                      ? null
+                                      : () {
+                                          walletController
+                                              .setSelectedHistoryIndex(4, true);
+                                        },
+                                  child: WalletAmountTypeCardWidget(
+                                    icon: Images.walletBalanceIcon,
+                                    amount: profileController
+                                            .profileInfo?.levelUpRewardAmount ??
+                                        0,
+                                    title: 'level_up_reward'.tr,
+                                    haveBorderColor:
+                                        walletController.selectedHistoryIndex ==
+                                                4
+                                            ? true
+                                            : false,
+                                  ),
+                                ),
+                              ],
+                              if (walletController.walletTypeIndex == 2) ...[
+                                if (profileController.profileInfo != null &&
+                                    profileController.profileInfo!.wallet !=
+                                        null)
+                                  WalletAmountTypeCardWidget(
+                                    icon: Images.totalEarning,
+                                    amount: profileController
+                                            .profileInfo?.totalEarning ??
+                                        0,
+                                    title: 'total_earning'.tr,
+                                  ),
+                                WalletAmountTypeCardWidget(
+                                  icon: Images.pendingWithdrawn,
+                                  amount: profileController
+                                          .profileInfo?.tripIncome ??
+                                      0,
+                                  title: 'trips_income'.tr,
+                                ),
+                                WalletAmountTypeCardWidget(
+                                  icon: Images.withdrawMoneyIcon,
+                                  amount: profileController
+                                          .profileInfo?.totalTips ??
+                                      0,
+                                  title: 'total_tips'.tr,
+                                ),
+                                WalletAmountTypeCardWidget(
+                                  icon: Images.totalCommissionIcon,
+                                  amount: profileController
+                                          .profileInfo?.totalCommission ??
+                                      0,
+                                  title: 'total_commission'.tr,
+                                ),
+                              ]
+                            ],
                           ),
-
-                          GestureDetector(
-                            onTap: walletController.isLoading ? null : (){
-                              walletController.setSelectedHistoryIndex(3, true);
-                            },
-                            child: WalletAmountTypeCardWidget(icon: Images.paidBalanceIcon,
-                              amount:profileController.profileInfo?.paidAmount ?? 0,
-                              title: 'paid_amount'.tr,
-                              haveBorderColor: walletController.selectedHistoryIndex == 3 ? true : false,
-                            ),
-                          ),
-
-                          GestureDetector(
-                            onTap: walletController.isLoading ? null : (){
-                              walletController.setSelectedHistoryIndex(4, true);
-                            },
-                            child: WalletAmountTypeCardWidget(icon: Images.walletBalanceIcon,
-                              amount: profileController.profileInfo?.levelUpRewardAmount ?? 0,
-                              title: 'level_up_reward'.tr,
-                              haveBorderColor: walletController.selectedHistoryIndex == 4 ? true : false,
-                            ),
-                          ),
-                        ],
-
-                        if(walletController.walletTypeIndex == 2)...[
-                          if(profileController.profileInfo != null && profileController.profileInfo!.wallet != null)
-                            WalletAmountTypeCardWidget(icon: Images.totalEarning,
-                              amount: profileController.profileInfo?.totalEarning ?? 0,
-                              title: 'total_earning'.tr,
-                            ),
-
-                          WalletAmountTypeCardWidget(icon: Images.pendingWithdrawn ,
-                            amount: profileController.profileInfo?.tripIncome ?? 0,
-                            title: 'trips_income'.tr,
-                          ),
-
-                          WalletAmountTypeCardWidget(icon: Images.withdrawMoneyIcon,
-                            amount: profileController.profileInfo?.totalTips ?? 0,
-                            title: 'total_tips'.tr,
-                          ),
-
-                          WalletAmountTypeCardWidget(icon: Images.totalCommissionIcon,
-                            amount: profileController.profileInfo?.totalCommission ?? 0,
-                            title: 'total_commission'.tr,
-                          ),
-                        ]
-
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ]);
+                        ),
+                      );
+                    }),
+                ]);
           })),
-
           SliverToBoxAdapter(
             child: GetBuilder<WalletController>(builder: (walletController) {
               return Column(children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: Dimensions.paddingSizeDefault),
                   child: Row(children: [
                     Text(
-                      (walletController.walletTypeIndex == 0 || walletController.walletTypeIndex == 2)?
-                      'transaction_history'.tr :
-                      'point_gained_history'.tr,
+                      (walletController.walletTypeIndex == 0 ||
+                              walletController.walletTypeIndex == 2)
+                          ? 'transaction_history'.tr
+                          : 'point_gained_history'.tr,
                       style: textBold.copyWith(
-                        color: Theme.of(context).textTheme.bodyMedium!.color!.withOpacity(0.8),
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodyMedium!
+                            .color!
+                            .withOpacity(0.8),
                         fontSize: Dimensions.fontSizeExtraLarge,
                       ),
                     ),
                   ]),
                 ),
                 const SizedBox(height: Dimensions.paddingSizeDefault),
-
-                if(walletController.walletTypeIndex == 0)
+                if (walletController.walletTypeIndex == 0)
                   (walletController.selectedHistoryIndex == 1 ||
-                      walletController.selectedHistoryIndex == 2) ?
-                  PendingSettledListWidget(
-                    walletController: walletController,
-                    scrollController: scrollController,
-                  ) :
-                  PayableTransactionListWidget(
-                    walletController: walletController,
-                    scrollController: scrollController,
-                  ),
-
-                if(walletController.walletTypeIndex == 1)
-                  LoyaltyPointTransactionListWidget(walletController: walletController),
-
-                if(walletController.walletTypeIndex == 2)
+                          walletController.selectedHistoryIndex == 2)
+                      ? PendingSettledListWidget(
+                          walletController: walletController,
+                          scrollController: scrollController,
+                        )
+                      : PayableTransactionListWidget(
+                          walletController: walletController,
+                          scrollController: scrollController,
+                        ),
+                if (walletController.walletTypeIndex == 1)
+                  LoyaltyPointTransactionListWidget(
+                      walletController: walletController),
+                if (walletController.walletTypeIndex == 2)
                   IncomeStatementListWidget(
-                      walletController: walletController,
-                      scrollController: scrollController,
+                    walletController: walletController,
+                    scrollController: scrollController,
                   ),
-
               ]);
             }),
           )
         ]),
       ),
-
-      Positioned(top: Get.height * (GetPlatform.isIOS ? 0.13 :  0.11),
+      Positioned(
+        top: Get.height * (GetPlatform.isIOS ? 0.13 : 0.11),
         child: GetBuilder<WalletController>(builder: (walletController) {
-          return Padding(padding: const EdgeInsets.only(left: Dimensions.paddingSizeSmall),
+          return Padding(
+            padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
             child: SizedBox(
               height: Get.find<LocalizationController>().isLtr ? 45 : 50,
-              width: Get.width-Dimensions.paddingSizeDefault,
+              width: Get.width - Dimensions.paddingSizeDefault,
               child: ListView.builder(
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
                 scrollDirection: Axis.horizontal,
                 itemCount: walletController.walletTypeList.length,
-                itemBuilder: (context, index){
-                  return SizedBox(width: 200,
+                itemBuilder: (context, index) {
+                  return SizedBox(
+                    width: 200,
                     child: TypeButtonWidget(
                       index: index,
                       name: walletController.walletTypeList[index],
                       selectedIndex: walletController.walletTypeIndex,
-                      onTap: ()=> walletController.setWalletTypeIndex(index),
+                      onTap: () => walletController.setWalletTypeIndex(index),
                     ),
                   );
                 },
@@ -270,14 +319,14 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 }
 
-
 class SliverDelegate extends SliverPersistentHeaderDelegate {
   Widget child;
   double height;
   SliverDelegate({required this.child, this.height = 70});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return child;
   }
 
@@ -289,6 +338,8 @@ class SliverDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(SliverDelegate oldDelegate) {
-    return oldDelegate.maxExtent != height || oldDelegate.minExtent != height || child != oldDelegate.child;
+    return oldDelegate.maxExtent != height ||
+        oldDelegate.minExtent != height ||
+        child != oldDelegate.child;
   }
 }

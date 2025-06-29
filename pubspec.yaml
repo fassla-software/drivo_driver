@@ -75,7 +75,6 @@ dependencies:
   flutter_downloader: ^1.11.8
   just_audio: ^0.10.2
   record: ^6.0.0
-  ffmpeg_kit_flutter_new: ^1.2.0
   
 
 dependency_overrides:

@@ -176,62 +176,18 @@ class _SplashScreenState extends State<SplashScreen>
               Container(
                 decoration: BoxDecoration(
                     color: Get.isDarkMode ? Colors.black : Colors.white),
-                alignment: Alignment.bottomCenter,
-                child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Stack(
-                          alignment: AlignmentDirectional.bottomCenter,
-                          children: [
-                            Container(
-                              transform: Matrix4.translationValues(
-                                  0,
-                                  320 -
-                                      (320 *
-                                          double.tryParse(
-                                              _animation.value.toString())!),
-                                  0),
-                              child: Column(children: [
-                                Opacity(
-                                  opacity: _animation.value,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(
-                                      left: 120 -
-                                          ((120 *
-                                              double.tryParse(_animation.value
-                                                  .toString())!)),
-                                    ),
-                                    child: Image.asset(
-                                        Get.isDarkMode
-                                            ? Images.logoNameWhite
-                                            : Images.logoNameBlack,
-                                        width: 160),
-                                  ),
-                                ),
-                                const SizedBox(height: 50),
-                                Image.asset(
-                                  Images.splashBackgroundOne,
-                                  width: Get.width,
-                                  height: Get.height / 2,
-                                  fit: BoxFit.cover,
-                                ),
-                              ]),
-                            ),
-                            Container(
-                              transform: Matrix4.translationValues(0, 20, 0),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: (70 *
-                                      double.tryParse(
-                                          _animation.value.toString())!),
-                                ),
-                                child: Image.asset(Images.splashBackgroundTwo,
-                                    width: Get.size.width),
-                              ),
-                            )
-                          ]),
-                    ]),
+                alignment: Alignment.center,
+                child: Transform.scale(
+                  scale: _animation.value,
+                  child: Opacity(
+                    opacity: _animation.value,
+                    child: Image.asset(
+                        Get.isDarkMode
+                            ? Images.logoNameWhite
+                            : Images.logoNameBlack,
+                        width: 160),
+                  ),
+                ),
               ),
             ]);
           });

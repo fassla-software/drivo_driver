@@ -134,6 +134,7 @@ class AppConstants {
       '/api/driver/chat/send-predefined-question-to-admin';
   static const String predefineFawQuestionList =
       '/api/driver/config/predefined-question-answer-list';
+  static const String registerRouteUri = '/api/driver/register-route';
 
   // Shared Key
   static const String theme = 'theme';

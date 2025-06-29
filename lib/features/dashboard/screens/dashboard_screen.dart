@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ride_sharing_user_app/features/car_polling/screens/register_route_screen.dart';
 import 'package:ride_sharing_user_app/features/dashboard/controllers/bottom_menu_controller.dart';
 import 'package:ride_sharing_user_app/features/dashboard/domain/models/navigation_model.dart';
 import 'package:ride_sharing_user_app/features/home/screens/home_screen.dart';
@@ -35,6 +36,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           activeIcon: Images.activityActive,
           inactiveIcon: Images.activityOutline,
           screen: const TripHistoryMenu()),
+      NavigationModel(
+          name: 'register_route'.tr,
+          activeIcon: Images.homeActive,
+          inactiveIcon: Images.homeOutline,
+          screen: const RegisterRouteScreen()),
       NavigationModel(
           name: 'notification'.tr,
           activeIcon: Images.notificationActive,
@@ -155,7 +161,7 @@ class CustomMenuItem extends StatelessWidget {
                   isSelected ? activeIcon : inActiveIcon,
                   width: Dimensions.menuIconSize,
                   height: Dimensions.menuIconSize,
-                  color: Theme.of(context).primaryColorDark,
+                  color: Colors.white,
                 ),
                 isSelected
                     ? Text(name.tr,

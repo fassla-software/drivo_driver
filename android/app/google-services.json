@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:643071460200:android:3c7b3297898b40dab9ccdd",
+        "android_client_info": {
+          "package_name": "com.app.ts.drivo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnPQa_hpNZ5APrH9Albcm8lx3uHflHzx4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:643071460200:android:4eaf4cb160a87e3bb9ccdd",
         "android_client_info": {
           "package_name": "com.devu.hwilo"
@@ -48,6 +67,44 @@
         "mobilesdk_app_id": "1:643071460200:android:95003cff6ca7e5ddb9ccdd",
         "android_client_info": {
           "package_name": "com.drivoDriver.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnPQa_hpNZ5APrH9Albcm8lx3uHflHzx4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:643071460200:android:cde992cbe85c3f3bb9ccdd",
+        "android_client_info": {
+          "package_name": "com.drivofassla.drive"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnPQa_hpNZ5APrH9Albcm8lx3uHflHzx4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:643071460200:android:ba767563f5f10567b9ccdd",
+        "android_client_info": {
+          "package_name": "com.drivofassla.driver"
         }
       },
       "oauth_client": [],

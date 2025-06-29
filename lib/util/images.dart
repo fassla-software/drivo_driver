@@ -1,5 +1,5 @@
 class Images {
-  static const String logo = 'assets/image/logo.png';
+  static const String logo = 'assets/image/logo_png.png';
 
   static const String logoNameWhite = 'assets/image/logo_name_white.png';
   static const String logoNameBlack = 'assets/image/logo_name_black.png';
