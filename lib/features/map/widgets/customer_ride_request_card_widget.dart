@@ -572,6 +572,7 @@ class CustomerRideRequestCardWidget extends StatelessWidget {
                                   width: Dimensions.paddingSizeLarge),
                               Expanded(
                                   child: ButtonWidget(
+                                backgroundColor: Theme.of(context).primaryColor,
                                 buttonText: 'accept'.tr,
                                 radius: Dimensions.paddingSizeSmall,
                                 onPressed: () async {

@@ -336,7 +336,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Badge(
                       backgroundColor: Theme.of(context).primaryColorDark,
                       label: Text('${ridingCount + parcelCount}'),
-                      child: Image.asset(Images.ongoing)),
+                      child: Image.asset(
+                        Images.ongoing,
+                        color: Colors.white,
+                      )),
                 ),
               ),
             );

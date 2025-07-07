@@ -37,8 +37,7 @@ class _ProfileMenuScreenState extends State<ProfileMenuScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          Get.isDarkMode ? Theme.of(context).primaryColor : Colors.white,
+      backgroundColor: Colors.black,
       body: Column(children: [
         const ProfileLevelWidgetWidget(),
         const SizedBox(height: 25),
@@ -211,18 +210,12 @@ class ProfileMenuItem extends StatelessWidget {
           child: Row(children: [
             SizedBox(
               width: Dimensions.iconSizeLarge,
-              child: Image.asset(icon,
-                  color: Get.isDarkMode
-                      ? Theme.of(context).colorScheme.outline
-                      : Theme.of(context).primaryColor),
+              child: Image.asset(icon, color: Colors.white),
             ),
             const SizedBox(width: Dimensions.paddingSizeDefault),
             Text(title.tr,
                 style: textSemiBold.copyWith(
-                    color: Get.isDarkMode
-                        ? Theme.of(context).colorScheme.outline
-                        : Theme.of(context).primaryColor,
-                    fontSize: Dimensions.fontSizeLarge)),
+                    color: Colors.white, fontSize: Dimensions.fontSizeLarge)),
           ]),
         ),
       ),

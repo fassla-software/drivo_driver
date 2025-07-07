@@ -181,13 +181,8 @@ class MyApp extends StatelessWidget {
                                                 width: 15,
                                                 child: Image.asset(Images.map,
                                                     color: Get.isDarkMode
-                                                        ? Theme.of(context)
-                                                            .textTheme
-                                                            .bodyMedium!
-                                                            .color
-                                                        : Theme.of(context)
-                                                            .colorScheme
-                                                            .shadow)))
+                                                        ? Colors.white
+                                                        : Colors.white)))
                                       ]),
                                     ),
                                   ),

@@ -31,7 +31,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.drivoDriver.com"
+    namespace "com.drivofassla.drive"
     compileSdk 35
     ndkVersion = "27.0.12077973"
 
@@ -50,7 +50,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId "com.drivoDriver.com"
+        applicationId "com.drivofassla.drive"
         minSdkVersion 24
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
@@ -68,11 +68,11 @@ android {
         }
     }
 
-    buildTypes {
+     buildTypes {
         release {
             minifyEnabled false
             shrinkResources false
-            signingConfig signingConfigs.debug
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
 }

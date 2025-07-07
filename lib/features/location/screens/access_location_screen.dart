@@ -42,6 +42,7 @@ class AccessLocationScreen extends StatelessWidget {
                                           MainAxisAlignment.center,
                                       children: [
                                         Image.asset(
+                                          color: Theme.of(context).primaryColor,
                                           Images.mapLocationIcon,
                                           height: 240,
                                         ),
@@ -98,6 +99,7 @@ class BottomButton extends StatelessWidget {
             width: MediaQuery.of(context).size.width - 40,
             child: Column(children: [
               ButtonWidget(
+                backgroundColor: Theme.of(context).primaryColor,
                 buttonText: 'use_current_location'.tr,
                 fontSize: Dimensions.fontSizeSmall,
                 onPressed: () async {

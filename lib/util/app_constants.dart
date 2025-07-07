@@ -134,6 +134,12 @@ class AppConstants {
       '/api/driver/chat/send-predefined-question-to-admin';
   static const String predefineFawQuestionList =
       '/api/driver/config/predefined-question-answer-list';
+  static const String registerRouteUri = '/api/driver/register-route';
+  static const String carpoolRoutesUri = '/api/driver/carpool-routes';
+  static const String currentTripsWithPassengersUri =
+      '/api/driver/current-trips-with-passengers';
+  static const String startTripUri = '/api/driver/start-trip';
+  static const String reviewPassengerUri = '/api/driver/review';
 
   // Shared Key
   static const String theme = 'theme';
