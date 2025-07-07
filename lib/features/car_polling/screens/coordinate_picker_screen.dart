@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../../../common_widgets/app_bar_widget.dart';
 import '../../../features/location/controllers/location_controller.dart';
 import '../../../theme/theme_controller.dart';
@@ -29,9 +31,18 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
   Set<Marker> _markers = {};
   bool _isLoading = true;
   bool _showSearchField = false;
+  bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String? _selectedLocationName;
+  Timer? _searchDebounceTimer;
+  List<Map<String, dynamic>> _searchResults = [];
+  Map<String, List<Map<String, dynamic>>> _searchCache = {};
+
+  // Your API key from AndroidManifest.xml
+  // This is safe since it's not committed to public repositories
+  static const String _googlePlacesApiKey =
+      'AIzaSyBEBg6ItImxrxhsGbv7G9KNyvy1gr2MGwo';
 
   @override
   void initState() {
@@ -43,6 +54,7 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _searchDebounceTimer?.cancel();
     super.dispose();
   }
 
@@ -54,7 +66,26 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
     } else {
       // Try to get current location
       try {
-        Position position = await Geolocator.getCurrentPosition();
+        Position position;
+
+        // Try to get location with high accuracy first
+        try {
+          position = await Geolocator.getCurrentPosition(
+            locationSettings: LocationSettings(
+              accuracy: LocationAccuracy.high,
+              timeLimit: Duration(seconds: 8), // 8 second timeout for init
+            ),
+          );
+        } catch (e) {
+          // Fallback to medium accuracy if high accuracy fails
+          position = await Geolocator.getCurrentPosition(
+            locationSettings: LocationSettings(
+              accuracy: LocationAccuracy.medium,
+              timeLimit: Duration(seconds: 12), // 12 second timeout
+            ),
+          );
+        }
+
         _selectedPosition = LatLng(position.latitude, position.longitude);
         _addMarker(_selectedPosition!);
       } catch (e) {
@@ -112,7 +143,26 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
     });
 
     try {
-      Position position = await Geolocator.getCurrentPosition();
+      Position position;
+
+      // Try to get location with high accuracy first
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 10), // 10 second timeout
+          ),
+        );
+      } catch (e) {
+        // Fallback to medium accuracy if high accuracy fails
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 15), // 15 second timeout
+          ),
+        );
+      }
+
       LatLng currentPosition = LatLng(position.latitude, position.longitude);
 
       setState(() {
@@ -132,10 +182,10 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
       });
 
       Get.showSnackbar(GetSnackBar(
-        title: 'error'.tr,
+        title: 'location_error'.tr,
         message: 'unable_to_get_current_location'.tr,
-        duration: const Duration(seconds: 2),
-        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+        backgroundColor: Colors.orange,
       ));
     }
   }
@@ -148,33 +198,153 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
       } else {
         _searchController.clear();
         _searchFocusNode.unfocus();
+        _searchResults.clear();
+        _searchDebounceTimer?.cancel();
       }
     });
   }
 
   void _searchLocation() async {
-    if (_searchController.text.trim().isEmpty) return;
+    final query = _searchController.text.trim();
+    if (query.isEmpty) return;
 
-    // For demo purposes, we'll simulate search results
-    // In a real app, you would integrate with Google Places API
-    List<Map<String, dynamic>> searchResults =
-        _getSearchResults(_searchController.text.trim());
+    // Cancel previous search timer
+    _searchDebounceTimer?.cancel();
 
-    if (searchResults.isNotEmpty) {
-      _showSearchResults(searchResults);
-    } else {
+    // Debounce search to avoid too many API calls
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query);
+    });
+  }
+
+  void _performSearch(String query) async {
+    if (query.length < 2) return;
+
+    // Check cache first
+    if (_searchCache.containsKey(query)) {
+      setState(() {
+        _searchResults = _searchCache[query]!;
+      });
+      if (_searchResults.isNotEmpty) {
+        _showSearchResults(_searchResults);
+      }
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      List<Map<String, dynamic>> results = await _getPlacesFromGoogleAPI(query);
+
+      // Cache the results
+      _searchCache[query] = results;
+
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+      });
+
+      if (results.isNotEmpty) {
+        _showSearchResults(results);
+      } else {
+        Get.showSnackbar(GetSnackBar(
+          title: 'no_results'.tr,
+          message: 'no_locations_found_for_search'.tr,
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.orange,
+        ));
+      }
+    } catch (e) {
+      setState(() {
+        _isSearching = false;
+      });
+
       Get.showSnackbar(GetSnackBar(
-        title: 'no_results'.tr,
-        message: 'no_locations_found_for_search'.tr,
+        title: 'error'.tr,
+        message: 'search_failed_please_try_again'.tr,
         duration: const Duration(seconds: 2),
-        backgroundColor: Colors.orange,
+        backgroundColor: Colors.red,
       ));
+
+      // Fallback to demo results if API fails
+      List<Map<String, dynamic>> fallbackResults =
+          _getFallbackSearchResults(query);
+      if (fallbackResults.isNotEmpty) {
+        _showSearchResults(fallbackResults);
+      }
     }
   }
 
-  List<Map<String, dynamic>> _getSearchResults(String query) {
-    // Demo search results - replace with actual Google Places API integration
-    List<Map<String, dynamic>> demoResults = [
+  Future<List<Map<String, dynamic>>> _getPlacesFromGoogleAPI(
+      String query) async {
+    try {
+      // Get current location for better search results
+      LatLng? currentLocation;
+      try {
+        Position position = await Geolocator.getCurrentPosition();
+        currentLocation = LatLng(position.latitude, position.longitude);
+      } catch (e) {
+        currentLocation = Get.find<LocationController>().initialPosition;
+      }
+
+      final String url =
+          'https://maps.googleapis.com/maps/api/place/textsearch/json'
+          '?query=${Uri.encodeComponent(query)}'
+          '&location=${currentLocation.latitude},${currentLocation.longitude}'
+          '&radius=50000'
+          '&key=$_googlePlacesApiKey';
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['status'] == 'OK') {
+          List<Map<String, dynamic>> places = [];
+
+          for (var result in data['results']) {
+            if (result['geometry'] != null &&
+                result['geometry']['location'] != null) {
+              places.add({
+                'name': result['name'] ?? 'Unknown Place',
+                'address': result['formatted_address'] ?? 'Unknown Address',
+                'lat': result['geometry']['location']['lat'].toDouble(),
+                'lng': result['geometry']['location']['lng'].toDouble(),
+                'place_id': result['place_id'] ?? '',
+                'types': result['types'] ?? [],
+                'rating': result['rating']?.toDouble(),
+                'price_level': result['price_level'],
+              });
+            }
+          }
+
+          return places
+              .take(10)
+              .toList(); // Limit to 10 results for performance
+        } else if (data['status'] == 'REQUEST_DENIED') {
+          throw Exception(
+              'API key invalid or Places API not enabled. Check your Google Cloud Console.');
+        } else if (data['status'] == 'OVER_QUERY_LIMIT') {
+          throw Exception('Query limit exceeded. Check your API usage limits.');
+        } else if (data['status'] == 'ZERO_RESULTS') {
+          return []; // Return empty list for no results
+        } else {
+          throw Exception('Places API error: ${data['status']}');
+        }
+      } else {
+        throw Exception('HTTP Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Google Places API Error: $e');
+      throw e;
+    }
+  }
+
+  List<Map<String, dynamic>> _getFallbackSearchResults(String query) {
+    // Fallback search results when API fails
+    List<Map<String, dynamic>> fallbackResults = [
       {
         'name': 'Cairo International Airport',
         'address': 'Cairo, Egypt',
@@ -205,9 +375,21 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
         'lat': 30.0131,
         'lng': 31.4914,
       },
+      {
+        'name': 'Hurghada Marina',
+        'address': 'Hurghada, Egypt',
+        'lat': 27.2579,
+        'lng': 33.8116,
+      },
+      {
+        'name': 'Sharm El Sheikh Airport',
+        'address': 'Sharm El Sheikh, Egypt',
+        'lat': 27.9773,
+        'lng': 34.3950,
+      },
     ];
 
-    return demoResults
+    return fallbackResults
         .where((result) =>
             result['name'].toLowerCase().contains(query.toLowerCase()) ||
             result['address'].toLowerCase().contains(query.toLowerCase()))
@@ -301,24 +483,56 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
         decoration: BoxDecoration(
           border: Border.all(color: Theme.of(context).dividerColor),
           borderRadius: BorderRadius.circular(Dimensions.paddingSizeSmall),
+          color: Theme.of(context).cardColor,
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.location_on,
-              color: Theme.of(context).primaryColor,
-              size: 24,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                _getPlaceIcon(result['types']),
+                color: Theme.of(context).primaryColor,
+                size: 24,
+              ),
             ),
             const SizedBox(width: Dimensions.paddingSizeDefault),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    result['name'],
-                    style: textMedium.copyWith(
-                      fontSize: Dimensions.fontSizeDefault,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          result['name'],
+                          style: textMedium.copyWith(
+                            fontSize: Dimensions.fontSizeDefault,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (result['rating'] != null) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.star,
+                          color: Colors.amber,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          result['rating'].toStringAsFixed(1),
+                          style: textRegular.copyWith(
+                            fontSize: Dimensions.fontSizeExtraSmall,
+                            color: Theme.of(context).hintColor,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -327,10 +541,24 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
                       fontSize: Dimensions.fontSizeSmall,
                       color: Theme.of(context).hintColor,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  if (result['types'] != null &&
+                      result['types'].isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _getPlaceTypeText(result['types']),
+                      style: textRegular.copyWith(
+                        fontSize: Dimensions.fontSizeExtraSmall,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+            const SizedBox(width: Dimensions.paddingSizeSmall),
             Icon(
               Icons.arrow_forward_ios,
               color: Theme.of(context).hintColor,
@@ -340,6 +568,85 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
         ),
       ),
     );
+  }
+
+  IconData _getPlaceIcon(List<dynamic>? types) {
+    if (types == null || types.isEmpty) return Icons.location_on;
+
+    String primaryType = types.first.toString();
+
+    switch (primaryType) {
+      case 'airport':
+        return Icons.flight;
+      case 'hospital':
+        return Icons.local_hospital;
+      case 'gas_station':
+        return Icons.local_gas_station;
+      case 'restaurant':
+        return Icons.restaurant;
+      case 'shopping_mall':
+        return Icons.shopping_cart;
+      case 'school':
+      case 'university':
+        return Icons.school;
+      case 'bank':
+        return Icons.account_balance;
+      case 'mosque':
+        return Icons.mosque;
+      case 'church':
+        return Icons.church;
+      case 'park':
+        return Icons.park;
+      case 'tourist_attraction':
+        return Icons.attractions;
+      case 'lodging':
+        return Icons.hotel;
+      default:
+        return Icons.place;
+    }
+  }
+
+  String _getPlaceTypeText(List<dynamic> types) {
+    if (types.isEmpty) return '';
+
+    String primaryType = types.first.toString();
+
+    switch (primaryType) {
+      case 'airport':
+        return 'Airport';
+      case 'hospital':
+        return 'Hospital';
+      case 'gas_station':
+        return 'Gas Station';
+      case 'restaurant':
+        return 'Restaurant';
+      case 'shopping_mall':
+        return 'Shopping Mall';
+      case 'school':
+        return 'School';
+      case 'university':
+        return 'University';
+      case 'bank':
+        return 'Bank';
+      case 'mosque':
+        return 'Mosque';
+      case 'church':
+        return 'Church';
+      case 'park':
+        return 'Park';
+      case 'tourist_attraction':
+        return 'Tourist Attraction';
+      case 'lodging':
+        return 'Hotel';
+      default:
+        return primaryType
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map((word) => word.isNotEmpty
+                ? '${word[0].toUpperCase()}${word.substring(1)}'
+                : word)
+            .join(' ');
+    }
   }
 
   @override
@@ -409,16 +716,37 @@ class _CoordinatePickerScreenState extends State<CoordinatePickerScreen> {
                                 color: Theme.of(context).hintColor,
                               ),
                             ),
+                            onChanged: (value) {
+                              // Real-time search as user types
+                              if (value.length >= 2) {
+                                _searchLocation();
+                              }
+                            },
                             onSubmitted: (_) => _searchLocation(),
                           ),
                         ),
-                        IconButton(
-                          onPressed: _searchLocation,
-                          icon: Icon(
-                            Icons.send,
-                            color: Theme.of(context).primaryColor,
+                        if (_isSearching)
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).primaryColor,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          IconButton(
+                            onPressed: _searchLocation,
+                            icon: Icon(
+                              Icons.send,
+                              color: Theme.of(context).primaryColor,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),

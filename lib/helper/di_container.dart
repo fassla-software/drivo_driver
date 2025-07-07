@@ -80,10 +80,26 @@ import 'package:ride_sharing_user_app/features/trip/domain/repositories/trip_rep
 import 'package:ride_sharing_user_app/features/wallet/controllers/wallet_controller.dart';
 import 'package:ride_sharing_user_app/features/wallet/domain/repositories/wallet_repository.dart';
 import 'package:ride_sharing_user_app/features/car_polling/controllers/register_route_controller.dart';
+import 'package:ride_sharing_user_app/features/car_polling/controllers/carpool_routes_controller.dart';
 import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/register_route_repository.dart';
 import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/register_route_repository_interface.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/carpool_routes_repository.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/carpool_routes_repository_interface.dart';
 import 'package:ride_sharing_user_app/features/car_polling/domain/services/register_route_service.dart';
 import 'package:ride_sharing_user_app/features/car_polling/domain/services/register_route_service_interface.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/services/carpool_routes_service.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/services/carpool_routes_service_interface.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/passenger_review_repository.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/passenger_review_repository_interface.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/services/passenger_review_service.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/services/passenger_review_service_interface.dart';
+import 'package:ride_sharing_user_app/features/car_polling/controllers/passenger_review_controller.dart';
+import 'package:ride_sharing_user_app/features/car_polling/controllers/current_trips_controller.dart';
+import 'package:ride_sharing_user_app/features/car_polling/controllers/carpool_trip_map_controller.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/current_trips_repository.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/current_trips_repository_interface.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/services/current_trips_service.dart';
+import 'package:ride_sharing_user_app/features/car_polling/domain/services/current_trips_service_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get/get.dart';
 
@@ -200,6 +216,27 @@ Future<Map<String, Map<String, String>>> init() async {
       RegisterRouteService(registerRouteRepositoryInterface: Get.find());
   Get.lazyPut(() => registerRouteServiceInterface);
 
+  CarpoolRoutesRepositoryInterface carpoolRoutesRepositoryInterface =
+      CarpoolRoutesRepository(apiClient: Get.find());
+  Get.lazyPut(() => carpoolRoutesRepositoryInterface);
+  CarpoolRoutesServiceInterface carpoolRoutesServiceInterface =
+      CarpoolRoutesService(carpoolRoutesRepositoryInterface: Get.find());
+  Get.lazyPut(() => carpoolRoutesServiceInterface);
+
+  CurrentTripsRepositoryInterface currentTripsRepositoryInterface =
+      CurrentTripsRepository(apiClient: Get.find());
+  Get.lazyPut(() => currentTripsRepositoryInterface);
+  CurrentTripsServiceInterface currentTripsServiceInterface =
+      CurrentTripsService(currentTripsRepositoryInterface: Get.find());
+  Get.lazyPut(() => currentTripsServiceInterface);
+
+  PassengerReviewRepositoryInterface passengerReviewRepositoryInterface =
+      PassengerReviewRepository(apiClient: Get.find());
+  Get.lazyPut(() => passengerReviewRepositoryInterface);
+  PassengerReviewServiceInterface passengerReviewServiceInterface =
+      PassengerReviewService(passengerReviewRepository: Get.find());
+  Get.lazyPut(() => passengerReviewServiceInterface);
+
   //Service
   Get.lazyPut(() => SplashService(splashRepositoryInterface: Get.find()));
   Get.lazyPut(() => AuthService(authRepositoryInterface: Get.find()));
@@ -220,6 +257,10 @@ Future<Map<String, Map<String, String>>> init() async {
       HelpAndSupportService(helpAndSupportRepositoryInterface: Get.find()));
   Get.lazyPut(
       () => RegisterRouteService(registerRouteRepositoryInterface: Get.find()));
+  Get.lazyPut(
+      () => CarpoolRoutesService(carpoolRoutesRepositoryInterface: Get.find()));
+  Get.lazyPut(
+      () => CurrentTripsService(currentTripsRepositoryInterface: Get.find()));
 
   // Repository
   Get.lazyPut(() =>
@@ -240,6 +281,8 @@ Future<Map<String, Map<String, String>>> init() async {
   Get.lazyPut(() => OutOfZoneRepository(apiClient: Get.find()));
   Get.lazyPut(() => HelpAndSupportRepository(apiClient: Get.find()));
   Get.lazyPut(() => RegisterRouteRepository(apiClient: Get.find()));
+  Get.lazyPut(() => CarpoolRoutesRepository(apiClient: Get.find()));
+  Get.lazyPut(() => CurrentTripsRepository(apiClient: Get.find()));
 
   // Controller
   Get.lazyPut(() => SplashController(splashServiceInterface: Get.find()));
@@ -266,8 +309,12 @@ Future<Map<String, Map<String, String>>> init() async {
   Get.lazyPut(
       () => ReferAndEarnController(referEarnServiceInterface: Get.find()));
   Get.lazyPut(() => OutOfZoneController(outOfZoneServiceInterface: Get.find()));
-  Get.lazyPut(
-      () => RegisterRouteController(registerRouteServiceInterface: Get.find()));
+  Get.put(RegisterRouteController(registerRouteServiceInterface: Get.find()));
+  // Use Get.put() instead of Get.lazyPut() to prevent disposal issues
+  Get.put(CarpoolRoutesController(carpoolRoutesServiceInterface: Get.find()));
+  Get.put(PassengerReviewController(passengerReviewService: Get.find()));
+  Get.put(CurrentTripsController(currentTripsServiceInterface: Get.find()));
+  // CarpoolTripMapController is created per screen instance with unique tags
 
   // Retrieving localized data
   Map<String, Map<String, String>> languages = {};

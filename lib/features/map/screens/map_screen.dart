@@ -59,6 +59,9 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                     'unpaid'))) {
       // Get.find<RideController>().getCurrentRideStatus(froDetails: true, isUpdate: false);
       Get.find<RiderMapController>().setMarkersInitialPosition();
+    } else {
+      // Add current location marker when no ongoing trip
+      Get.find<RiderMapController>().myCurrentLocation();
     }
     getCurrentLocation();
   }
@@ -194,6 +197,9 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                           } else {
                             riderMapController.getPickupToDestinationPolyline();
                           }
+                        } else {
+                          // Show current location marker when map is created and no active ride
+                          await riderMapController.myCurrentLocation();
                         }
                         _mapController = controller;
                       },

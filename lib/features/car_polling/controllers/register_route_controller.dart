@@ -191,13 +191,13 @@ class RegisterRouteController extends GetxController {
             ? int.parse(maxAgeController.text)
             : null;
 
-        if (minAge != null && (minAge < 16 || minAge > 80)) {
-          _showValidationError('minimum_age_must_be_between_16_and_80'.tr);
+        if (minAge != null && (minAge < 13 || minAge > 80)) {
+          _showValidationError('minimum_age_must_be_between_13_and_80'.tr);
           return false;
         }
 
-        if (maxAge != null && (maxAge < 16 || maxAge > 80)) {
-          _showValidationError('maximum_age_must_be_between_16_and_80'.tr);
+        if (maxAge != null && (maxAge < 13 || maxAge > 80)) {
+          _showValidationError('maximum_age_must_be_between_13_and_80'.tr);
           return false;
         }
 
@@ -458,7 +458,7 @@ class RegisterRouteController extends GetxController {
         isSmokingAllowed: _isSmokingAllowed ? 1 : 0,
         hasMusic: _hasMusic ? 1 : 0,
         hasScreenEntertainment: _hasScreenEntertainment ? 1 : 0,
-        allowLuggage: _allowLuggage,
+        allowLuggage: _allowLuggage ? 1 : 0,
         restStops: _restStops,
       );
 
@@ -489,6 +489,17 @@ class RegisterRouteController extends GetxController {
         String errorMessage =
             _registerRouteResponse?.message ?? 'failed_to_register_route'.tr;
 
+        // Provide more specific error messages based on common server responses
+        if (errorMessage.toLowerCase().contains('validation')) {
+          errorMessage = 'validation_failed_on_server'.tr;
+        } else if (errorMessage.toLowerCase().contains('unauthorized') ||
+            errorMessage.toLowerCase().contains('token')) {
+          errorMessage = 'session_expired_please_login_again'.tr;
+        } else if (errorMessage.toLowerCase().contains('server') ||
+            errorMessage.toLowerCase().contains('internal')) {
+          errorMessage = 'server_error_occurred'.tr;
+        }
+
         Get.showSnackbar(GetSnackBar(
           title: 'error'.tr,
           message: errorMessage,
@@ -505,7 +516,10 @@ class RegisterRouteController extends GetxController {
 
       if (e.toString().contains('timeout')) {
         errorMessage = 'request_timeout_please_try_again'.tr;
-      } else if (e.toString().contains('socket')) {
+      } else if (e.toString().contains('socket') ||
+          e.toString().contains('network')) {
+        errorMessage = 'check_your_internet_and_try_again'.tr;
+      } else if (e.toString().contains('connection')) {
         errorMessage = 'no_internet_connection'.tr;
       }
 

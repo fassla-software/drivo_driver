@@ -15,7 +15,7 @@ class RegisterRouteRequestModel {
   final int allowedAgeMin;
   final int allowedAgeMax;
   final int hasScreenEntertainment;
-  final bool allowLuggage;
+  final int allowLuggage;
   final String vehicleId;
   final double price;
   final List<RestStopModel> restStops;

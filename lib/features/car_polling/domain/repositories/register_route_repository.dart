@@ -13,16 +13,50 @@ class RegisterRouteRepository implements RegisterRouteRepositoryInterface {
   Future<RegisterRouteResponseModel?> registerRoute(
       RegisterRouteRequestModel requestModel) async {
     try {
+      print('====> BEFORE API CALL - Request Model JSON:');
+      print(requestModel.toJson());
+
       final response = await apiClient.postData(
-        '${AppConstants.baseUrl}${AppConstants.registerRouteUri}',
+        AppConstants
+            .registerRouteUri, // Remove baseUrl since apiClient already has it
         requestModel.toJson(),
       );
 
-      if (response.statusCode == 200) {
+      print('====> Register Route API Response Status: ${response.statusCode}');
+      print('====> Register Route API Response Body: ${response.body}');
+      print(
+          '====> Register Route API Response StatusText: ${response.statusText}');
+
+      // Handle successful response
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return RegisterRouteResponseModel.fromJson(response.body);
       }
-      return null;
+
+      // Handle error responses with server messages
+      if (response.body != null) {
+        try {
+          final errorResponse =
+              RegisterRouteResponseModel.fromJson(response.body);
+          return errorResponse; // Return the error response so controller can show server message
+        } catch (e) {
+          print('====> Error parsing response body: $e');
+          // If parsing fails, create a generic error response
+          return RegisterRouteResponseModel(
+            success: false,
+            message: 'Server returned status code: ${response.statusCode}',
+            data: null,
+          );
+        }
+      }
+
+      // Fallback for no response body
+      return RegisterRouteResponseModel(
+        success: false,
+        message: 'Request failed with status code: ${response.statusCode}',
+        data: null,
+      );
     } catch (e) {
+      print('====> Exception in registerRoute: $e');
       rethrow;
     }
   }
