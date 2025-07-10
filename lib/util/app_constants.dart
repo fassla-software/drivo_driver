@@ -36,7 +36,6 @@ class AppConstants {
   static const String fcmTokenUpdate = '/api/driver/update/fcm-token';
   static const String tripDetails = '/api/driver/ride/details/';
   static const String uploadScreenShots = '/api/ride/store-screenshot';
-  static const String tripAcceptOrReject = '/api/driver/ride/trip-action';
   static const String matchOtp = '/api/driver/ride/match-otp';
   static const String remainDistance = '/api/driver/get-routes';
   static const String tripStatusUpdate = '/api/driver/ride/update-status';
@@ -140,6 +139,9 @@ class AppConstants {
       '/api/driver/current-trips-with-passengers';
   static const String startTripUri = '/api/driver/start-trip';
   static const String reviewPassengerUri = '/api/driver/review';
+
+  static const String rideRequest = '/api/customer/ride/create';
+  static const String tripAcceptOrReject = '/api/driver/ride/trip-action';
 
   // Shared Key
   static const String theme = 'theme';

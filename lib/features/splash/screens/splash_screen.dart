@@ -22,6 +22,7 @@ import 'package:ride_sharing_user_app/helper/notification_helper.dart';
 import 'package:ride_sharing_user_app/helper/pusher_helper.dart';
 import 'package:ride_sharing_user_app/util/app_constants.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
+import 'package:ride_sharing_user_app/util/styles.dart';
 
 import '../../../record_manger.dart';
 
@@ -169,27 +170,32 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).primaryColor,
       body: GetBuilder<RideController>(builder: (rideController) {
         return GetBuilder<ProfileController>(builder: (profileController) {
           return GetBuilder<LocationController>(builder: (locationController) {
-            return Stack(children: [
-              Container(
-                decoration: BoxDecoration(
-                    color: Get.isDarkMode ? Colors.black : Colors.white),
-                alignment: Alignment.center,
-                child: Transform.scale(
-                  scale: _animation.value,
-                  child: Opacity(
+            return Center(
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                  Opacity(
                     opacity: _animation.value,
-                    child: Image.asset(
-                        Get.isDarkMode
-                            ? Images.logoNameWhite
-                            : Images.logoNameBlack,
-                        width: 160),
+                    child: Get.isDarkMode
+                        ? Image.asset(Images.logoNameBlack, width: 160)
+                        : Image.asset(Images.logoNameBlack, width: 160),
                   ),
-                ),
-              ),
-            ]);
+                  const SizedBox(height: 20),
+                  Opacity(
+                      opacity: _animation.value,
+                      child: Text(
+                        'International standards , local vibes',
+                        style: textBold.copyWith(
+                            fontSize: 11,
+                            color: const Color.fromARGB(198, 255, 255, 255)),
+                        textAlign: TextAlign.center,
+                      )),
+                ]));
           });
         });
       }),
