@@ -26,17 +26,14 @@ class CurrentTripsController extends GetxController implements GetxService {
   CurrentTripsWithPassengersResponseModel? get currentTripsResponse =>
       _currentTripsResponse;
 
-  CurrentTripsData? _currentTripsData;
-  CurrentTripsData? get currentTripsData => _currentTripsData;
-
   List<CurrentTrip> _currentTrips = [];
   List<CurrentTrip> get currentTrips => _currentTrips;
 
   int _totalTrips = 0;
   int get totalTrips => _totalTrips;
 
-  int _upcomingTrips = 0;
-  int get upcomingTrips => _upcomingTrips;
+  int _pendingTrips = 0;
+  int get pendingTrips => _pendingTrips;
 
   int _ongoingTrips = 0;
   int get ongoingTrips => _ongoingTrips;
@@ -76,14 +73,20 @@ class CurrentTripsController extends GetxController implements GetxService {
             CurrentTripsWithPassengersResponseModel.fromJson(response.body);
 
         if (_currentTripsResponse?.data != null) {
-          _currentTripsData = _currentTripsResponse!.data!;
-          _currentTrips = _currentTripsData?.currentTrips ?? [];
+          _currentTrips = _currentTripsResponse!.data!;
 
-          // Update statistics
-          _totalTrips = _currentTripsData?.totalTrips ?? 0;
-          _upcomingTrips = _currentTripsData?.upcomingTrips ?? 0;
-          _ongoingTrips = _currentTripsData?.ongoingTrips ?? 0;
-          _completedTrips = _currentTripsData?.completedTrips ?? 0;
+          // Calculate statistics from the data
+          _totalTrips = _currentTrips.length;
+          _pendingTrips = _currentTrips
+              .where((trip) => trip.tripStatus == 'scheduled')
+              .length;
+          _ongoingTrips = _currentTrips
+              .where((trip) =>
+                  trip.totalAcceptedPassengers != null &&
+                  trip.totalAcceptedPassengers! > 0)
+              .length;
+          _completedTrips =
+              0; // This would need to be calculated based on your business logic
         } else {
           _clearData();
         }
@@ -123,7 +126,7 @@ class CurrentTripsController extends GetxController implements GetxService {
   /// Get trip by route ID
   CurrentTrip? getTripByRouteId(int routeId) {
     try {
-      return _currentTrips.firstWhere((trip) => trip.routeId == routeId);
+      return _currentTrips.firstWhere((trip) => trip.id == routeId);
     } catch (e) {
       return null;
     }
@@ -134,15 +137,17 @@ class CurrentTripsController extends GetxController implements GetxService {
 
   /// Check if trip has accepted passengers
   bool tripHasPassengers(CurrentTrip trip) {
-    return trip.totalAcceptedPassengers != null &&
-        trip.totalAcceptedPassengers! > 0;
+    return (trip.totalAcceptedPassengers ?? 0) > 0;
   }
 
   /// Get available seats for a trip
   int getAvailableSeats(CurrentTrip trip) {
     int totalSeats = trip.seatsAvailable ?? 0;
     int occupiedSeats = trip.totalAcceptedPassengers ?? 0;
-    return totalSeats - occupiedSeats;
+    // إذا لم يوجد ركاب، المتاح = كل المقاعد
+    if (occupiedSeats == 0) return totalSeats;
+    // إذا يوجد ركاب، المتاح = المقاعد - الركاب
+    return (totalSeats - occupiedSeats).clamp(0, totalSeats);
   }
 
   /// Get route features as a list of strings
@@ -164,11 +169,10 @@ class CurrentTripsController extends GetxController implements GetxService {
   Color getTripStatusColor(String? status) {
     switch (status?.toLowerCase()) {
       case 'scheduled':
-        return Colors.purple;
-      case 'ongoing':
-        return Colors.green;
       case 'pending':
         return Colors.orange;
+      case 'ongoing':
+        return Colors.green;
       case 'completed':
         return Colors.blue;
       case 'cancelled':
@@ -183,10 +187,10 @@ class CurrentTripsController extends GetxController implements GetxService {
     switch (status?.toLowerCase()) {
       case 'scheduled':
         return 'scheduled'.tr;
-      case 'ongoing':
-        return 'ongoing'.tr;
       case 'pending':
         return 'pending'.tr;
+      case 'ongoing':
+        return 'ongoing'.tr;
       case 'completed':
         return 'completed'.tr;
       case 'cancelled':
@@ -232,38 +236,84 @@ class CurrentTripsController extends GetxController implements GetxService {
     }
   }
 
-  /// Filter trips by status
-  List<CurrentTrip> getFilteredTrips(String status) {
-    return _currentTrips
-        .where((trip) => trip.tripStatus?.toLowerCase() == status.toLowerCase())
-        .toList();
-  }
+  // getFilteredTrips method removed as we now use direct filtering in getters
 
-  /// Get ongoing trips
-  List<CurrentTrip> get ongoingTripsList {
-    return getFilteredTrips('ongoing');
+  /// تحديد حالة الرحلة بناءً على القيم الفعلية
+  String getTripStatus(CurrentTrip trip) {
+    // قيد الانتظار
+    if (trip.startTime != null &&
+        (trip.endTime == null || trip.endTime!.isEmpty) &&
+        (trip.isTripStarted == null || trip.isTripStarted == 0)) {
+      return 'pending';
+    }
+    // قيد التنفيذ
+    if (trip.startTime != null &&
+        (trip.endTime == null || trip.endTime!.isEmpty) &&
+        trip.isTripStarted == 1) {
+      return 'ongoing';
+    }
+    // منتهية
+    if (trip.startTime != null &&
+        trip.endTime != null &&
+        trip.endTime!.isNotEmpty) {
+      return 'completed';
+    }
+    return 'unknown';
   }
 
   /// Get pending trips
   List<CurrentTrip> get pendingTripsList {
-    return getFilteredTrips('pending');
+    final list = _currentTrips
+        .where((trip) =>
+            (trip.isTripStarted == 0 || trip.isTripStarted == null) &&
+            (trip.endTime == null || trip.endTime!.isEmpty))
+        .toList();
+    for (var trip in _currentTrips) {
+      print(
+          '[PENDING CHECK] id=${trip.routeId}, isTripStarted=${trip.isTripStarted}, endTime=${trip.endTime}, result=${(trip.isTripStarted == 0 || trip.isTripStarted == null) && (trip.endTime == null || trip.endTime!.isEmpty)}');
+    }
+    return list;
+  }
+
+  /// Get ongoing trips
+  List<CurrentTrip> get ongoingTripsList {
+    final list = _currentTrips
+        .where((trip) =>
+            trip.isTripStarted == 1 &&
+            (trip.endTime == null || trip.endTime!.isEmpty))
+        .toList();
+    for (var trip in _currentTrips) {
+      print(
+          '[ONGOING CHECK] id=${trip.routeId}, isTripStarted=${trip.isTripStarted}, endTime=${trip.endTime}, result=${trip.isTripStarted == 1 && (trip.endTime == null || trip.endTime!.isEmpty)}');
+    }
+    return list;
   }
 
   /// Get completed trips
   List<CurrentTrip> get completedTripsList {
-    return getFilteredTrips('completed');
+    final list = _currentTrips
+        .where((trip) => trip.endTime != null && trip.endTime!.isNotEmpty)
+        .toList();
+    for (var trip in _currentTrips) {
+      print(
+          '[COMPLETED CHECK] id=${trip.routeId}, isTripStarted=${trip.isTripStarted}, endTime=${trip.endTime}, result=${trip.endTime != null && trip.endTime!.isNotEmpty}');
+    }
+    return list;
   }
 
   /// Get trip duration text
   String getTripDurationText(CurrentTrip trip) {
-    if (trip.startTime != null && trip.endTime != null) {
+    if (trip.startTime != null &&
+        trip.endTime != null &&
+        trip.endTime!.isNotEmpty) {
       try {
-        DateTime startTime = DateTime.parse(trip.startTime!);
-        DateTime endTime = DateTime.parse(trip.endTime!);
-        Duration duration = endTime.difference(startTime);
+        // Parse start time from format like "2025-07-22 19:38:00"
+        DateTime startDateTime = DateTime.parse(trip.startTime!);
+        DateTime endDateTime = DateTime.parse(trip.endTime!);
 
+        Duration duration = endDateTime.difference(startDateTime);
         int hours = duration.inHours;
-        int minutes = duration.inMinutes.remainder(60);
+        int minutes = duration.inMinutes % 60;
 
         if (hours > 0) {
           return '${hours}h ${minutes}m';
@@ -279,12 +329,12 @@ class CurrentTripsController extends GetxController implements GetxService {
 
   /// Get formatted start time
   String getFormattedStartTime(CurrentTrip trip) {
-    if (trip.startTime != null) {
+    if (trip.startTime != null && trip.startTime!.isNotEmpty) {
       try {
-        DateTime startTime = DateTime.parse(trip.startTime!);
-        return '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}';
+        DateTime startDateTime = DateTime.parse(trip.startTime!);
+        return '${startDateTime.hour.toString().padLeft(2, '0')}:${startDateTime.minute.toString().padLeft(2, '0')}';
       } catch (e) {
-        return 'N/A';
+        return trip.startTime!;
       }
     }
     return 'N/A';
@@ -292,12 +342,12 @@ class CurrentTripsController extends GetxController implements GetxService {
 
   /// Get formatted start date
   String getFormattedStartDate(CurrentTrip trip) {
-    if (trip.startTime != null) {
+    if (trip.startTime != null && trip.startTime!.isNotEmpty) {
       try {
-        DateTime startTime = DateTime.parse(trip.startTime!);
-        return '${startTime.day}/${startTime.month}/${startTime.year}';
+        DateTime startDateTime = DateTime.parse(trip.startTime!);
+        return '${startDateTime.year}-${startDateTime.month.toString().padLeft(2, '0')}-${startDateTime.day.toString().padLeft(2, '0')}';
       } catch (e) {
-        return 'N/A';
+        return trip.startTime!;
       }
     }
     return 'N/A';
@@ -310,11 +360,11 @@ class CurrentTripsController extends GetxController implements GetxService {
   }
 
   /// Get trip by passenger ID
-  CurrentTrip? getTripByPassengerId(int passengerId) {
+  CurrentTrip? getTripByPassengerId(String carpoolTripId) {
     for (CurrentTrip trip in _currentTrips) {
       if (trip.acceptedPassengers != null) {
         for (AcceptedPassenger passenger in trip.acceptedPassengers!) {
-          if (passenger.passengerId == passengerId) {
+          if (passenger.carpoolTripId == carpoolTripId) {
             return trip;
           }
         }
@@ -324,11 +374,12 @@ class CurrentTripsController extends GetxController implements GetxService {
   }
 
   /// Get passenger from trip
-  AcceptedPassenger? getPassengerFromTrip(CurrentTrip trip, int passengerId) {
+  AcceptedPassenger? getPassengerFromTrip(
+      CurrentTrip trip, String carpoolTripId) {
     if (trip.acceptedPassengers != null) {
       try {
-        return trip.acceptedPassengers!
-            .firstWhere((passenger) => passenger.passengerId == passengerId);
+        return trip.acceptedPassengers!.firstWhere(
+            (passenger) => passenger.carpoolTripId == carpoolTripId);
       } catch (e) {
         return null;
       }
@@ -340,9 +391,8 @@ class CurrentTripsController extends GetxController implements GetxService {
   void _clearData() {
     _currentTrips.clear();
     _currentTripsResponse = null;
-    _currentTripsData = null;
     _totalTrips = 0;
-    _upcomingTrips = 0;
+    _pendingTrips = 0;
     _ongoingTrips = 0;
     _completedTrips = 0;
   }
@@ -427,8 +477,5 @@ class CurrentTripsController extends GetxController implements GetxService {
     return _isStartingTrip && _startingTripRouteId == routeId.toString();
   }
 
-  /// Get scheduled trips
-  List<CurrentTrip> get scheduledTripsList {
-    return getFilteredTrips('scheduled');
-  }
+  // scheduledTripsList getter removed as we now only have pending, ongoing, and completed trips
 }

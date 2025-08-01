@@ -4,12 +4,14 @@ import 'package:ride_sharing_user_app/util/images.dart';
 class AppConstants {
   static const String appName = 'Drivo Driver';
   static const String baseUrl =
-      'https://drivoeg.com'; /* 'https://drivemond-admin.codemond.com'; */
+      //'https://drivo.loca.lt';
+      'https://drivoeg.com';
+  /* 'https://drivemond-admin.codemond.com'; */
   static const String polylineMapKey =
       'AIzaSyCHj3QwVPXAcG57hgUCowCRtbc4moArVH0';
   /* 'AIzaSyCGSZyU5GjFtJuay5jjqRD-xIr3XhGu1Ek'; */
   //AIzaSyA8Qy5ipfdKm01zA3pDc-bK1ypII3tAKTI
-  static const double appVersion = 2.1;
+  static const double appVersion = 1.0;
 
   /// Flutter SDK 3.24.0
   static const String configUri = '/api/driver/configuration';

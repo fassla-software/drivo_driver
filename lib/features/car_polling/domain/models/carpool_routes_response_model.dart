@@ -47,6 +47,7 @@ class CarpoolRoutesResponseModel {
 }
 
 class CarpoolRoute {
+  int? id; // Added id field
   String? name;
   String? profileImage;
   int? seats;
@@ -67,6 +68,7 @@ class CarpoolRoute {
   List<Passenger>? passengers;
 
   CarpoolRoute({
+    this.id, // Added id parameter
     this.name,
     this.profileImage,
     this.seats,
@@ -89,6 +91,7 @@ class CarpoolRoute {
 
   factory CarpoolRoute.fromJson(Map<String, dynamic> json) {
     return CarpoolRoute(
+      id: json['id'], // Added id parsing
       name: json['name'],
       profileImage: json['profile_image'],
       seats: json['seats'],
@@ -116,6 +119,7 @@ class CarpoolRoute {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id, // Added id to JSON
       'name': name,
       'profile_image': profileImage,
       'seats': seats,
@@ -146,6 +150,8 @@ class Passenger {
   int? seatsCount;
   double? fare;
   String? profileImage;
+  List<double>? startCoordinates; // Added startCoordinates
+  List<double>? endCoordinates; // Added endCoordinates
 
   Passenger({
     this.carpoolPassengerId,
@@ -155,6 +161,8 @@ class Passenger {
     this.seatsCount,
     this.fare,
     this.profileImage,
+    this.startCoordinates, // Added parameter
+    this.endCoordinates, // Added parameter
   });
 
   factory Passenger.fromJson(Map<String, dynamic> json) {
@@ -166,6 +174,12 @@ class Passenger {
       seatsCount: json['seats_count'],
       fare: json['fare']?.toDouble(),
       profileImage: json['profile_image'],
+      startCoordinates: json['start_coordinates'] != null
+          ? List<double>.from(json['start_coordinates'])
+          : null, // Added parsing
+      endCoordinates: json['end_coordinates'] != null
+          ? List<double>.from(json['end_coordinates'])
+          : null, // Added parsing
     );
   }
 
@@ -178,6 +192,8 @@ class Passenger {
       'seats_count': seatsCount,
       'fare': fare,
       'profile_image': profileImage,
+      'start_coordinates': startCoordinates, // Added to JSON
+      'end_coordinates': endCoordinates, // Added to JSON
     };
   }
 }

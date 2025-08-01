@@ -4,7 +4,6 @@ import '../domain/models/register_route_request_model.dart';
 import '../domain/models/register_route_response_model.dart';
 import '../domain/models/rest_stop_model.dart';
 import '../domain/services/register_route_service_interface.dart';
-import 'dart:convert';
 
 class RegisterRouteController extends GetxController {
   final RegisterRouteServiceInterface registerRouteServiceInterface;
@@ -52,7 +51,7 @@ class RegisterRouteController extends GetxController {
   bool _allowLuggage = true;
   bool get allowLuggage => _allowLuggage;
 
-  List<RestStopModel> _restStops = [];
+  final List<RestStopModel> _restStops = [];
   List<RestStopModel> get restStops => _restStops;
 
   void setRideType(String type) {
@@ -176,10 +175,10 @@ class RegisterRouteController extends GetxController {
     }
 
     // Validate vehicle ID
-    if (vehicleIdController.text.isEmpty) {
-      _showValidationError('please_enter_vehicle_id'.tr);
-      return false;
-    }
+    // if (vehicleIdController.text.isEmpty) {
+    //   _showValidationError('please_enter_vehicle_id'.tr);
+    //   return false;
+    // }
 
     // Validate age limits if provided
     if (minAgeController.text.isNotEmpty || maxAgeController.text.isNotEmpty) {
@@ -321,7 +320,6 @@ class RegisterRouteController extends GetxController {
                       _buildDataSection('🚗 Vehicle & Pricing', [
                         'Price per seat: ${data['price']} EGP',
                         'Available seats: ${data['seats']}',
-                        'Vehicle ID: ${data['vehicleId']}',
                         'Ride type: ${data['rideType']}',
                       ]),
                       _buildDataSection('👥 Passenger Preferences', [
@@ -355,7 +353,7 @@ class RegisterRouteController extends GetxController {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Get.back(),
+                      onPressed: () => Navigator.pop(Get.context!),
                       child: const Text('Cancel'),
                     ),
                   ),
@@ -363,7 +361,7 @@ class RegisterRouteController extends GetxController {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        Get.back();
+                        Navigator.pop(Get.context!);
                         _proceedWithRegistration();
                       },
                       style: ElevatedButton.styleFrom(
@@ -469,7 +467,20 @@ class RegisterRouteController extends GetxController {
       _isLoading = false;
       update();
 
-      if (_registerRouteResponse != null && _registerRouteResponse!.success) {
+      // Check if we got a response
+      if (_registerRouteResponse == null) {
+        Get.showSnackbar(GetSnackBar(
+          title: 'error'.tr,
+          message: 'no_response_from_server'.tr,
+          duration: const Duration(seconds: 4),
+          backgroundColor: Colors.red,
+          icon: const Icon(Icons.error, color: Colors.white),
+        ));
+        return;
+      }
+
+      // Check if the request was successful
+      if (_registerRouteResponse!.success) {
         // Success
         Get.showSnackbar(GetSnackBar(
           title: 'success'.tr,
@@ -480,26 +491,16 @@ class RegisterRouteController extends GetxController {
         ));
 
         // Clear the form
-        _clearForm();
+        // _clearForm();
 
         // Navigate back or to a success screen
-        Get.back();
+        Navigator.pop(Get.context!);
       } else {
         // Handle API error
         String errorMessage =
             _registerRouteResponse?.message ?? 'failed_to_register_route'.tr;
 
-        // Provide more specific error messages based on common server responses
-        if (errorMessage.toLowerCase().contains('validation')) {
-          errorMessage = 'validation_failed_on_server'.tr;
-        } else if (errorMessage.toLowerCase().contains('unauthorized') ||
-            errorMessage.toLowerCase().contains('token')) {
-          errorMessage = 'session_expired_please_login_again'.tr;
-        } else if (errorMessage.toLowerCase().contains('server') ||
-            errorMessage.toLowerCase().contains('internal')) {
-          errorMessage = 'server_error_occurred'.tr;
-        }
-
+        // Show error message
         Get.showSnackbar(GetSnackBar(
           title: 'error'.tr,
           message: errorMessage,
@@ -507,10 +508,18 @@ class RegisterRouteController extends GetxController {
           backgroundColor: Colors.red,
           icon: const Icon(Icons.error, color: Colors.white),
         ));
+
+        // Log the error for debugging
+        print('====> Register Route Error: $errorMessage');
+        print('====> Response Data: ${_registerRouteResponse?.data}');
       }
     } catch (e) {
       _isLoading = false;
       update();
+
+      // Log the exception for debugging
+      print('====> Register Route Exception: $e');
+      print('====> Exception Type: ${e.runtimeType}');
 
       String errorMessage = 'network_error_please_try_again'.tr;
 
@@ -521,6 +530,10 @@ class RegisterRouteController extends GetxController {
         errorMessage = 'check_your_internet_and_try_again'.tr;
       } else if (e.toString().contains('connection')) {
         errorMessage = 'no_internet_connection'.tr;
+      } else if (e.toString().contains('format')) {
+        errorMessage = 'invalid_data_format'.tr;
+      } else if (e.toString().contains('parse')) {
+        errorMessage = 'invalid_response_format'.tr;
       }
 
       Get.showSnackbar(GetSnackBar(

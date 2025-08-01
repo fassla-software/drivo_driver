@@ -198,6 +198,20 @@
   "deny": "رفض",
   "given_fare": "الأجرة المحددة",
   "swipe_left_to_reject": "اسحب لليسار للرفض",
+  "passengers": "الركاب",
+  "available_passengers": "الركاب المتاحون",
+  "picked_up_passengers": "الركاب المستلمون",
+  "no_passengers": "لا يوجد ركاب",
+  "unknown_passenger": "راكب غير معروف",
+  "waiting": "في الانتظار",
+  "picked_up": "تم الاستلام",
+  "pickup": "استلام",
+  "picking_up": "جاري الاستلام",
+  "dropoff": "إنزال",
+  "seats": "مقاعد",
+  "passenger_location": "موقع الراكب",
+  "pickup_location": "موقع الاستلام",
+  "dropoff_location": "موقع الإنزال",
   "pickup_time": "وقت الالتقاط",
   "bid": "عرض",
   "accept": "قبول",
@@ -915,5 +929,6 @@
   "seats_count": "عدد المقاعد",
   "fare": "الأجرة",
   "otp": "كلمة المرور المؤقتة",
-  "unnamed_stop": "محطة بلا اسم"
+  "unnamed_stop": "محطة بلا اسم",
+  "car_pool": "مشاركة السيارة"
 }

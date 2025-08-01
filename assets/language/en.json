@@ -198,6 +198,20 @@
   "do_you_want_to": "Do you want to",
   "turn_off": "turn off",
   "pick_time_for_now": "pick time for now",
+  "passengers": "Passengers",
+  "available_passengers": "Available Passengers",
+  "picked_up_passengers": "Picked Up Passengers",
+  "no_passengers": "No Passengers",
+  "unknown_passenger": "Unknown Passenger",
+  "waiting": "Waiting",
+  "picked_up": "Picked Up",
+  "pickup": "Pickup",
+  "picking_up": "Picking Up",
+  "dropoff": "Dropoff",
+  "seats": "Seats",
+  "passenger_location": "Passenger Location",
+  "pickup_location": "Pickup Location",
+  "dropoff_location": "Dropoff Location",
   "confirm": "Confirm",
   "deny": "Deny",
   "given_fare": "Given fare",
@@ -922,5 +936,6 @@
   "end": "End",
   "start_location": "Start Location",
   "end_location": "End Location",
-  "unknown": "Unknown"
+  "unknown": "Unknown",
+  "car_pool": "Car Pool"
 }

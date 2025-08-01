@@ -31,7 +31,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.drivofassla.drive"
+    namespace "com.drivofassla.driver"
     compileSdk 35
     ndkVersion = "27.0.12077973"
 
@@ -50,7 +50,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId "com.drivofassla.drive"
+        applicationId "com.drivofassla.driver"
         minSdkVersion 24
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()

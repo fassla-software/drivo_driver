@@ -413,6 +413,7 @@ class _RestStopWidgetState extends State<RestStopWidget>
                 ),
                 style: TextButton.styleFrom(
                   foregroundColor: Theme.of(context).primaryColor,
+                  backgroundColor: const Color.fromARGB(51, 120, 120, 120),
                   padding: const EdgeInsets.symmetric(
                     horizontal: Dimensions.paddingSizeSmall,
                     vertical: 4,

@@ -13,6 +13,7 @@ import '../../../util/images.dart';
 import '../../../util/app_constants.dart';
 import '../../../features/location/controllers/location_controller.dart';
 import '../domain/models/current_trips_with_passengers_response_model.dart';
+import '../../../features/auth/controllers/auth_controller.dart';
 
 class CarpoolTripMapController extends GetxController {
   // Map controller
@@ -43,6 +44,7 @@ class CarpoolTripMapController extends GetxController {
 
   // Current trip data
   late CurrentTrip _currentTrip;
+  CurrentTrip get currentTrip => _currentTrip;
 
   // Location tracking
   StreamSubscription<Position>? _locationSubscription;
@@ -54,10 +56,294 @@ class CarpoolTripMapController extends GetxController {
   static const double _proximityRadius = 100.0; // 100 meters radius
   Timer? _proximityCheckTimer;
 
+  // Passenger pickup tracking
+  final RxMap<String, bool> _passengerPickupStatus = <String, bool>{}.obs;
+  final RxMap<String, bool> _isPickupInProgress = <String, bool>{}.obs;
+
   // Initialize with trip data
   void initializeTrip(CurrentTrip trip) {
     _currentTrip = trip;
+    _initializePassengerStatus();
     _initializeMap();
+  }
+
+  void _initializePassengerStatus() {
+    if (_currentTrip.acceptedPassengers != null) {
+      for (final passenger in _currentTrip.acceptedPassengers!) {
+        _passengerPickupStatus[passenger.carpoolTripId ?? ''] =
+            passenger.status == 'picked_up' || passenger.status == 'completed';
+        _isPickupInProgress[passenger.carpoolTripId ?? ''] = false;
+      }
+    }
+  }
+
+  // Getters for passenger status
+  bool isPassengerPickedUp(String carpoolTripId) {
+    return _passengerPickupStatus[carpoolTripId] ?? false;
+  }
+
+  bool isPickupInProgress(String carpoolTripId) {
+    return _isPickupInProgress[carpoolTripId] ?? false;
+  }
+
+  List<AcceptedPassenger> get availablePassengers {
+    if (_currentTrip.acceptedPassengers == null) return [];
+    return _currentTrip.acceptedPassengers!
+        .where((passenger) =>
+            passenger.status != 'picked_up' && passenger.status != 'completed')
+        .toList();
+  }
+
+  List<AcceptedPassenger> get pickedUpPassengers {
+    if (_currentTrip.acceptedPassengers == null) return [];
+    return _currentTrip.acceptedPassengers!
+        .where((passenger) =>
+            passenger.status == 'picked_up' || passenger.status == 'completed')
+        .toList();
+  }
+
+  // Pickup passenger function
+  Future<void> pickupPassenger(AcceptedPassenger passenger) async {
+    if (passenger.carpoolTripId == null) {
+      Get.showSnackbar(GetSnackBar(
+        title: 'خطأ',
+        message: 'معرف الرحلة غير متوفر',
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
+
+    // Check if pickup is already in progress
+    if (isPickupInProgress(passenger.carpoolTripId!)) {
+      return;
+    }
+
+    try {
+      // Set pickup in progress
+      _isPickupInProgress[passenger.carpoolTripId!] = true;
+      update();
+
+      debugPrint('بدء عملية استلام المستخدم: ${passenger.name}');
+
+      // TODO: Call API to pickup passenger when backend is ready
+      // final response = await http.post(
+      //   Uri.parse('${AppConstants.baseUrl}/api/driver/pickup-passenger'),
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': 'Bearer ${Get.find<AuthController>().token}',
+      //   },
+      //   body: json.encode({
+      //     'carpool_trip_id': passenger.carpoolTripId,
+      //     'passenger_id': passenger.passengerId,
+      //     'pickup_time': DateTime.now().toIso8601String(),
+      //     'driver_location': {
+      //       'lat': _driverPosition.value?.latitude,
+      //       'lng': _driverPosition.value?.longitude,
+      //     },
+      //   }),
+      // );
+
+      // Simulate API call success
+      await Future.delayed(Duration(seconds: 1));
+
+      // Update passenger status
+      passenger.status = 'picked_up';
+      _passengerPickupStatus[passenger.carpoolTripId!] = true;
+
+      // Remove passenger marker from map
+      _markers.removeWhere((marker) =>
+          marker.markerId.value == 'passenger_${passenger.carpoolTripId}');
+
+      // Remove from nearby passengers list
+      _nearbyPassengers.remove(passenger);
+
+      // Update map for passenger status change
+      _updateMapForPassengerStatus(passenger);
+
+      Get.showSnackbar(GetSnackBar(
+        title: 'تم الاستلام بنجاح',
+        message: 'تم استلام ${passenger.name ?? 'المستخدم'} بنجاح',
+        backgroundColor: Colors.green,
+      ));
+
+      debugPrint('تم استلام المستخدم بنجاح: ${passenger.name}');
+    } catch (e) {
+      debugPrint('خطأ في استلام المستخدم: $e');
+      Get.showSnackbar(GetSnackBar(
+        title: 'خطأ',
+        message: 'حدث خطأ أثناء استلام المستخدم: $e',
+        backgroundColor: Colors.red,
+      ));
+    } finally {
+      // Reset pickup in progress
+      _isPickupInProgress[passenger.carpoolTripId!] = false;
+      update();
+    }
+  }
+
+  // Dropoff passenger function
+  Future<void> dropoffPassenger(AcceptedPassenger passenger) async {
+    if (passenger.carpoolTripId == null) {
+      Get.showSnackbar(GetSnackBar(
+        title: 'خطأ',
+        message: 'معرف الرحلة غير متوفر',
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
+
+    try {
+      debugPrint('بدء عملية إنزال المستخدم: ${passenger.name}');
+
+      // TODO: Call API to dropoff passenger when backend is ready
+      // final response = await http.post(
+      //   Uri.parse('${AppConstants.baseUrl}/api/driver/dropoff-passenger'),
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': 'Bearer ${Get.find<AuthController>().token}',
+      //   },
+      //   body: json.encode({
+      //     'carpool_trip_id': passenger.carpoolTripId,
+      //     'passenger_id': passenger.passengerId,
+      //     'dropoff_time': DateTime.now().toIso8601String(),
+      //     'driver_location': {
+      //       'lat': _driverPosition.value?.latitude,
+      //       'lng': _driverPosition.value?.longitude,
+      //     },
+      //   }),
+      // );
+
+      // Simulate API call success
+      await Future.delayed(Duration(seconds: 1));
+
+      // Update passenger status
+      passenger.status = 'completed';
+      _passengerPickupStatus[passenger.carpoolTripId!] = true;
+
+      // Remove dropoff marker from map
+      _markers.removeWhere((marker) =>
+          marker.markerId.value == 'dropoff_${passenger.carpoolTripId}');
+
+      // Remove passenger route from map
+      _polylines.removeWhere((polyline) =>
+          polyline.polylineId.value ==
+              'passenger_route_${passenger.carpoolTripId}' ||
+          polyline.polylineId.value ==
+              'passenger_route_fallback_${passenger.carpoolTripId}');
+
+      // Update map and UI
+      update();
+
+      Get.showSnackbar(GetSnackBar(
+        title: 'تم الإنزال بنجاح',
+        message: 'تم إنزال ${passenger.name ?? 'المستخدم'} بنجاح',
+        backgroundColor: Colors.green,
+      ));
+
+      debugPrint('تم إنزال المستخدم بنجاح: ${passenger.name}');
+    } catch (e) {
+      debugPrint('خطأ في إنزال المستخدم: $e');
+      Get.showSnackbar(GetSnackBar(
+        title: 'خطأ',
+        message: 'حدث خطأ أثناء إنزال المستخدم: $e',
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
+  // Update map when passenger status changes
+  void _updateMapForPassengerStatus(AcceptedPassenger passenger) {
+    // Remove old passenger route
+    _polylines.removeWhere((polyline) =>
+        polyline.polylineId.value ==
+            'passenger_route_${passenger.carpoolTripId}' ||
+        polyline.polylineId.value ==
+            'passenger_route_fallback_${passenger.carpoolTripId}');
+
+    // Create new route based on current status
+    if (passenger.status == 'picked_up' &&
+        passenger.dropoffCoordinates?.lat != null &&
+        passenger.dropoffCoordinates?.lng != null) {
+      // Create route from current driver position to dropoff
+      if (_driverPosition.value != null) {
+        _createRouteToDropoff(passenger);
+      }
+    }
+
+    update();
+  }
+
+  // Update passenger routes when driver location changes
+  void _updatePassengerRoutesForNewLocation() {
+    if (_currentTrip.acceptedPassengers == null) return;
+
+    for (final passenger in _currentTrip.acceptedPassengers!) {
+      if (passenger.status == 'picked_up' &&
+          passenger.dropoffCoordinates?.lat != null &&
+          passenger.dropoffCoordinates?.lng != null) {
+        _createRouteToDropoff(passenger);
+      }
+    }
+  }
+
+  // Create route from current position to passenger dropoff
+  Future<void> _createRouteToDropoff(AcceptedPassenger passenger) async {
+    if (_driverPosition.value == null ||
+        passenger.dropoffCoordinates?.lat == null ||
+        passenger.dropoffCoordinates?.lng == null) return;
+
+    try {
+      final String url = 'https://maps.googleapis.com/maps/api/directions/json?'
+          'origin=${_driverPosition.value!.latitude},${_driverPosition.value!.longitude}&'
+          'destination=${passenger.dropoffCoordinates!.lat!},${passenger.dropoffCoordinates!.lng!}&'
+          'key=$_googleApiKey&'
+          'mode=driving';
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['status'] == 'OK' && data['routes'].isNotEmpty) {
+          final route = data['routes'][0];
+          final polylineString = route['overview_polyline']['points'];
+
+          final List<PointLatLng> polylineCoordinates =
+              polylinePoints.decodePolyline(polylineString);
+
+          final List<LatLng> roadPoints = polylineCoordinates
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
+
+          _polylines.add(Polyline(
+            polylineId:
+                PolylineId('passenger_route_${passenger.carpoolTripId}'),
+            points: roadPoints,
+            color: Colors.green,
+            width: 3,
+            patterns: [PatternItem.dash(15), PatternItem.gap(8)],
+          ));
+        }
+      }
+    } catch (e) {
+      debugPrint('Error creating route to dropoff for ${passenger.name}: $e');
+
+      // Fallback to straight line
+      _polylines.add(Polyline(
+        polylineId:
+            PolylineId('passenger_route_fallback_${passenger.carpoolTripId}'),
+        points: [
+          _driverPosition.value!,
+          LatLng(
+            passenger.dropoffCoordinates!.lat!,
+            passenger.dropoffCoordinates!.lng!,
+          ),
+        ],
+        color: Colors.green,
+        width: 2,
+        patterns: [PatternItem.dash(15), PatternItem.gap(8)],
+      ));
+    }
   }
 
   void _initializeMap() async {
@@ -120,18 +406,18 @@ class CarpoolTripMapController extends GetxController {
   }
 
   void _calculateCenterPosition() {
-    if (_currentTrip.startCoordinates?.lat != null &&
-        _currentTrip.startCoordinates?.lng != null) {
+    if (_currentTrip.startCoordinates != null &&
+        _currentTrip.startCoordinates!.length == 2) {
       _centerPosition.value = LatLng(
-        _currentTrip.startCoordinates!.lat!,
-        _currentTrip.startCoordinates!.lng!,
+        _currentTrip.startCoordinates![0],
+        _currentTrip.startCoordinates![1],
       );
-    } else if (_currentTrip.endCoordinates?.lat != null &&
-        _currentTrip.endCoordinates?.lng != null) {
+    } else if (_currentTrip.endCoordinates != null &&
+        _currentTrip.endCoordinates!.length == 2) {
       // Fallback to end coordinates if start is not available
       _centerPosition.value = LatLng(
-        _currentTrip.endCoordinates!.lat!,
-        _currentTrip.endCoordinates!.lng!,
+        _currentTrip.endCoordinates![0],
+        _currentTrip.endCoordinates![1],
       );
     } else {
       // Fallback to a default position
@@ -257,17 +543,24 @@ class CarpoolTripMapController extends GetxController {
 
       // تحريك الكاميرا لتتبع السائق إذا كان وضع التتبع مفعل
       if (_mapController != null && _isTrackingLocation) {
-        _mapController!.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: newPosition,
-              zoom: 16,
-              bearing: position.heading,
-              tilt: 45,
+        try {
+          _mapController!.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(
+                target: newPosition,
+                zoom: 16,
+                bearing: position.heading,
+                tilt: 45,
+              ),
             ),
-          ),
-        );
+          );
+        } catch (e) {
+          debugPrint('خطأ في تحريك الكاميرا: $e');
+        }
       }
+
+      // تحديث مسارات الركاب المستلمين
+      _updatePassengerRoutesForNewLocation();
 
       // تحديث الواجهة
       update();
@@ -352,12 +645,12 @@ class CarpoolTripMapController extends GetxController {
     _markers.clear();
 
     // Create start point marker (Green)
-    if (_currentTrip.startCoordinates?.lat != null &&
-        _currentTrip.startCoordinates?.lng != null) {
+    if (_currentTrip.startCoordinates != null &&
+        _currentTrip.startCoordinates!.length == 2) {
       final startMarker = await _createCustomMarker(
         'start',
-        LatLng(_currentTrip.startCoordinates!.lat!,
-            _currentTrip.startCoordinates!.lng!),
+        LatLng(_currentTrip.startCoordinates![0],
+            _currentTrip.startCoordinates![1]),
         'Trip Start',
         _currentTrip.startAddress ?? 'Start Location',
         Colors.green,
@@ -367,12 +660,12 @@ class CarpoolTripMapController extends GetxController {
     }
 
     // Create end point marker (Red)
-    if (_currentTrip.endCoordinates?.lat != null &&
-        _currentTrip.endCoordinates?.lng != null) {
+    if (_currentTrip.endCoordinates != null &&
+        _currentTrip.endCoordinates!.length == 2) {
       final endMarker = await _createCustomMarker(
         'end',
-        LatLng(_currentTrip.endCoordinates!.lat!,
-            _currentTrip.endCoordinates!.lng!),
+        LatLng(
+            _currentTrip.endCoordinates![0], _currentTrip.endCoordinates![1]),
         'Trip End',
         _currentTrip.endAddress ?? 'End Location',
         Colors.red,
@@ -392,11 +685,11 @@ class CarpoolTripMapController extends GetxController {
             passenger.pickupCoordinates?.lat != null &&
             passenger.pickupCoordinates?.lng != null) {
           final pickupMarker = await _createCustomMarker(
-            'passenger_${passenger.passengerId}', // Use passenger ID for easy removal
+            'passenger_${passenger.carpoolTripId}',
             LatLng(passenger.pickupCoordinates!.lat!,
                 passenger.pickupCoordinates!.lng!),
-            '${passenger.passengerName ?? 'Passenger'} Pickup',
-            '${passenger.pickupAddress ?? 'Pickup Location'} - ${passenger.passengerPhone ?? 'No Phone'}',
+            '${passenger.name ?? 'Passenger'} Pickup',
+            '${passenger.pickupAddress ?? 'Pickup Location'}',
             Colors.blue,
             Icons.person_pin_circle,
           );
@@ -407,33 +700,15 @@ class CarpoolTripMapController extends GetxController {
         if (passenger.dropoffCoordinates?.lat != null &&
             passenger.dropoffCoordinates?.lng != null) {
           final dropoffMarker = await _createCustomMarker(
-            'dropoff_$i',
+            'dropoff_${passenger.carpoolTripId}',
             LatLng(passenger.dropoffCoordinates!.lat!,
                 passenger.dropoffCoordinates!.lng!),
-            '${passenger.passengerName ?? 'Passenger'} Dropoff',
-            passenger.dropoffAddress ?? 'Dropoff Location',
+            '${passenger.name ?? 'Passenger'} Dropoff',
+            passenger.pickupAddress ?? 'Dropoff Location',
             Colors.orange,
             Icons.person_pin,
           );
           _markers.add(dropoffMarker);
-        }
-      }
-    }
-
-    // Create rest stop markers (Purple)
-    if (_currentTrip.restStops != null) {
-      for (int i = 0; i < _currentTrip.restStops!.length; i++) {
-        final restStop = _currentTrip.restStops![i];
-        if (restStop.lat != null && restStop.lng != null) {
-          final restStopMarker = await _createCustomMarker(
-            'rest_stop_$i',
-            LatLng(restStop.lat!, restStop.lng!),
-            'Rest Stop',
-            restStop.name ?? 'Rest Stop ${i + 1}',
-            Colors.purple,
-            Icons.local_gas_station,
-          );
-          _markers.add(restStopMarker);
         }
       }
     }
@@ -444,23 +719,24 @@ class CarpoolTripMapController extends GetxController {
 
     _polylines.clear();
 
-    List<LatLng> routePoints = [];
+    // Create main route from start to end with passenger waypoints
+    await _createMainRoutePolylines();
 
-    // Add start point
-    if (_currentTrip.startCoordinates?.lat != null &&
-        _currentTrip.startCoordinates?.lng != null) {
-      routePoints.add(LatLng(
-        _currentTrip.startCoordinates!.lat!,
-        _currentTrip.startCoordinates!.lng!,
-      ));
-    }
+    // Create individual passenger pickup/dropoff routes
+    await _createPassengerRoutePolylines();
 
-    // Add passenger pickup points
+    _isLoadingPolylines.value = false;
+  }
+
+  Future<void> _createMainRoutePolylines() async {
+    List<LatLng> waypoints = [];
+
+    // Add passenger pickup points as waypoints
     if (_currentTrip.acceptedPassengers != null) {
       for (final passenger in _currentTrip.acceptedPassengers!) {
         if (passenger.pickupCoordinates?.lat != null &&
             passenger.pickupCoordinates?.lng != null) {
-          routePoints.add(LatLng(
+          waypoints.add(LatLng(
             passenger.pickupCoordinates!.lat!,
             passenger.pickupCoordinates!.lng!,
           ));
@@ -468,21 +744,12 @@ class CarpoolTripMapController extends GetxController {
       }
     }
 
-    // Add rest stops
-    if (_currentTrip.restStops != null) {
-      for (final restStop in _currentTrip.restStops!) {
-        if (restStop.lat != null && restStop.lng != null) {
-          routePoints.add(LatLng(restStop.lat!, restStop.lng!));
-        }
-      }
-    }
-
-    // Add passenger dropoff points
+    // Add passenger dropoff points as waypoints
     if (_currentTrip.acceptedPassengers != null) {
       for (final passenger in _currentTrip.acceptedPassengers!) {
         if (passenger.dropoffCoordinates?.lat != null &&
             passenger.dropoffCoordinates?.lng != null) {
-          routePoints.add(LatLng(
+          waypoints.add(LatLng(
             passenger.dropoffCoordinates!.lat!,
             passenger.dropoffCoordinates!.lng!,
           ));
@@ -490,80 +757,72 @@ class CarpoolTripMapController extends GetxController {
       }
     }
 
-    // Add end point
-    if (_currentTrip.endCoordinates?.lat != null &&
-        _currentTrip.endCoordinates?.lng != null) {
-      routePoints.add(LatLng(
-        _currentTrip.endCoordinates!.lat!,
-        _currentTrip.endCoordinates!.lng!,
-      ));
-    }
+    // Create route from start to end with waypoints
+    if (_currentTrip.startCoordinates != null &&
+        _currentTrip.startCoordinates!.length == 2 &&
+        _currentTrip.endCoordinates != null &&
+        _currentTrip.endCoordinates!.length == 2) {
+      try {
+        final String waypointsString = waypoints
+            .map((point) => '${point.latitude},${point.longitude}')
+            .join('|');
 
-    // Create main route with real road polylines
-    await _createMainRoutePolylines(routePoints);
+        final String url =
+            'https://maps.googleapis.com/maps/api/directions/json?'
+            'origin=${_currentTrip.startCoordinates![0]},${_currentTrip.startCoordinates![1]}&'
+            'destination=${_currentTrip.endCoordinates![0]},${_currentTrip.endCoordinates![1]}&'
+            '${waypointsString.isNotEmpty ? 'waypoints=$waypointsString&' : ''}'
+            'key=$_googleApiKey&'
+            'mode=driving&'
+            'traffic_model=best_guess&'
+            'departure_time=now';
 
-    // Create individual pickup/dropoff road connections
-    await _createPassengerRoutePolylines();
+        final response = await http.get(Uri.parse(url));
 
-    _isLoadingPolylines.value = false;
-  }
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
 
-  Future<void> _createMainRoutePolylines(List<LatLng> routePoints) async {
-    if (routePoints.length < 2) return;
+          if (data['status'] == 'OK' && data['routes'].isNotEmpty) {
+            final route = data['routes'][0];
+            final polylineString = route['overview_polyline']['points'];
 
-    try {
-      // Create road path through all waypoints
-      final String waypoints = routePoints
-          .skip(1) // Skip start point
-          .take(routePoints.length - 2) // Skip end point
-          .map((point) => '${point.latitude},${point.longitude}')
-          .join('|');
+            final List<PointLatLng> polylineCoordinates =
+                polylinePoints.decodePolyline(polylineString);
 
-      final String url = 'https://maps.googleapis.com/maps/api/directions/json?'
-          'origin=${routePoints.first.latitude},${routePoints.first.longitude}&'
-          'destination=${routePoints.last.latitude},${routePoints.last.longitude}&'
-          '${waypoints.isNotEmpty ? 'waypoints=$waypoints&' : ''}'
-          'key=$_googleApiKey&'
-          'mode=driving&'
-          'traffic_model=best_guess&'
-          'departure_time=now';
+            final List<LatLng> roadPoints = polylineCoordinates
+                .map((point) => LatLng(point.latitude, point.longitude))
+                .toList();
 
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
-        if (data['status'] == 'OK' && data['routes'].isNotEmpty) {
-          final route = data['routes'][0];
-          final polylineString = route['overview_polyline']['points'];
-
-          final List<PointLatLng> polylineCoordinates =
-              polylinePoints.decodePolyline(polylineString);
-
-          final List<LatLng> roadPoints = polylineCoordinates
-              .map((point) => LatLng(point.latitude, point.longitude))
-              .toList();
-
-          _polylines.add(Polyline(
-            polylineId: const PolylineId('main_route'),
-            points: roadPoints,
-            color: Get.theme.primaryColor,
-            width: 5,
-            patterns: [],
-          ));
+            _polylines.add(Polyline(
+              polylineId: const PolylineId('main_route'),
+              points: roadPoints,
+              color: Get.theme.primaryColor,
+              width: 5,
+              patterns: [],
+            ));
+          }
         }
+      } catch (e) {
+        debugPrint('Error creating main route polylines: $e');
+        // Fallback to straight line route
+        List<LatLng> fallbackPoints = [];
+        fallbackPoints.add(LatLng(
+          _currentTrip.startCoordinates![0],
+          _currentTrip.startCoordinates![1],
+        ));
+        fallbackPoints.addAll(waypoints);
+        fallbackPoints.add(LatLng(
+          _currentTrip.endCoordinates![0],
+          _currentTrip.endCoordinates![1],
+        ));
+        _polylines.add(Polyline(
+          polylineId: const PolylineId('main_route_fallback'),
+          points: fallbackPoints,
+          color: Get.theme.primaryColor,
+          width: 4,
+          patterns: [],
+        ));
       }
-    } catch (e) {
-      debugPrint('Error creating main route polylines: $e');
-
-      // Fallback to straight line if API fails
-      _polylines.add(Polyline(
-        polylineId: const PolylineId('main_route_fallback'),
-        points: routePoints,
-        color: Get.theme.primaryColor,
-        width: 4,
-        patterns: [],
-      ));
     }
   }
 
@@ -573,11 +832,26 @@ class CarpoolTripMapController extends GetxController {
     for (int i = 0; i < _currentTrip.acceptedPassengers!.length; i++) {
       final passenger = _currentTrip.acceptedPassengers![i];
 
-      // Connect pickup to dropoff for each passenger with real road path
-      if (passenger.pickupCoordinates?.lat != null &&
+      // Only create passenger routes for passengers who are not completed
+      if (passenger.status != 'completed' &&
+          passenger.pickupCoordinates?.lat != null &&
           passenger.pickupCoordinates?.lng != null &&
           passenger.dropoffCoordinates?.lat != null &&
           passenger.dropoffCoordinates?.lng != null) {
+        // Choose color based on passenger status
+        Color routeColor;
+        List<PatternItem> patterns;
+
+        if (passenger.status == 'picked_up') {
+          // Passenger is picked up, show route to dropoff
+          routeColor = Colors.green;
+          patterns = [PatternItem.dash(15), PatternItem.gap(8)];
+        } else {
+          // Passenger is waiting, show route from pickup to dropoff
+          routeColor = Colors.blue;
+          patterns = [PatternItem.dash(20), PatternItem.gap(10)];
+        }
+
         try {
           final String url =
               'https://maps.googleapis.com/maps/api/directions/json?'
@@ -603,20 +877,23 @@ class CarpoolTripMapController extends GetxController {
                   .toList();
 
               _polylines.add(Polyline(
-                polylineId: PolylineId('passenger_route_$i'),
+                polylineId:
+                    PolylineId('passenger_route_${passenger.carpoolTripId}'),
                 points: roadPoints,
-                color: Colors.blue,
+                color: routeColor,
                 width: 3,
-                patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+                patterns: patterns,
               ));
             }
           }
         } catch (e) {
-          debugPrint('Error creating passenger route $i: $e');
+          debugPrint(
+              'Error creating passenger route for ${passenger.name}: $e');
 
           // Fallback to straight line if API fails
           _polylines.add(Polyline(
-            polylineId: PolylineId('passenger_route_fallback_$i'),
+            polylineId: PolylineId(
+                'passenger_route_fallback_${passenger.carpoolTripId}'),
             points: [
               LatLng(
                 passenger.pickupCoordinates!.lat!,
@@ -627,9 +904,9 @@ class CarpoolTripMapController extends GetxController {
                 passenger.dropoffCoordinates!.lng!,
               ),
             ],
-            color: Colors.blue,
-            width: 3,
-            patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+            color: routeColor,
+            width: 2,
+            patterns: patterns,
           ));
         }
       }
@@ -718,11 +995,40 @@ class CarpoolTripMapController extends GetxController {
   }
 
   void fitMarkersOnMap() {
-    if (_markers.isEmpty || _mapController == null) return;
+    if (_mapController == null) return;
 
-    LatLngBounds bounds;
-    final List<LatLng> positions =
-        _markers.map((marker) => marker.position).toList();
+    final List<LatLng> positions = [];
+
+    // إضافة إحداثيات الرحلة الأساسية
+    if (_currentTrip.startCoordinates != null) {
+      positions.add(LatLng(
+        _currentTrip.startCoordinates![0],
+        _currentTrip.startCoordinates![1],
+      ));
+    }
+
+    if (_currentTrip.endCoordinates != null) {
+      positions.add(LatLng(
+        _currentTrip.endCoordinates![0],
+        _currentTrip.endCoordinates![1],
+      ));
+    }
+
+    // إضافة مواقع السائق إذا كان متاحًا
+    if (_driverPosition.value != null) {
+      positions.add(_driverPosition.value!);
+    }
+
+    // إضافة مواقع الركاب
+    positions.addAll(_markers.map((marker) => marker.position));
+
+    if (positions.isEmpty) {
+      // Fallback to default position
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(const LatLng(30.0444, 31.2357), 14),
+      );
+      return;
+    }
 
     if (positions.length == 1) {
       _mapController!.animateCamera(
@@ -743,7 +1049,7 @@ class CarpoolTripMapController extends GetxController {
       maxLng = maxLng > position.longitude ? maxLng : position.longitude;
     }
 
-    bounds = LatLngBounds(
+    final bounds = LatLngBounds(
       southwest: LatLng(minLat, minLng),
       northeast: LatLng(maxLat, maxLng),
     );
@@ -766,6 +1072,16 @@ class CarpoolTripMapController extends GetxController {
           ),
         ),
       );
+    } else if (_currentTrip.startCoordinates != null &&
+        _mapController != null) {
+      // Fallback to trip start coordinates if driver position is not available
+      final startLatLng = LatLng(
+        _currentTrip.startCoordinates![0],
+        _currentTrip.startCoordinates![1],
+      );
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(startLatLng, 16),
+      );
     }
   }
 
@@ -774,12 +1090,22 @@ class CarpoolTripMapController extends GetxController {
       _mapController!.animateCamera(
         CameraUpdate.newLatLngZoom(_driverPosition.value!, 16),
       );
+    } else if (_currentTrip.startCoordinates != null &&
+        _mapController != null) {
+      // Fallback to trip start coordinates if driver position is not available
+      final startLatLng = LatLng(
+        _currentTrip.startCoordinates![0],
+        _currentTrip.startCoordinates![1],
+      );
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(startLatLng, 16),
+      );
     }
   }
 
   void toggleLocationTracking() {
     _isTrackingLocation = !_isTrackingLocation;
-    if (_isTrackingLocation && _driverPosition.value != null) {
+    if (_isTrackingLocation) {
       followDriver();
     }
   }
@@ -921,8 +1247,6 @@ class CarpoolTripMapController extends GetxController {
   }
 
   // Getters for trip data
-  CurrentTrip get currentTrip => _currentTrip;
-
   // Proximity tracking methods
   void _startProximityChecking() {
     _proximityCheckTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
@@ -1011,7 +1335,7 @@ class CarpoolTripMapController extends GetxController {
                     ),
                     SizedBox(height: 12),
                     _buildInfoRow(Icons.phone, 'الهاتف',
-                        '${passenger.passengerPhone ?? 'غير متوفر'}'),
+                        'غير متوفر'), // passengerPhone is not available in new API structure
                     SizedBox(height: 8),
                     _buildInfoRow(Icons.location_on, 'العنوان',
                         '${passenger.pickupAddress ?? 'غير متوفر'}'),
@@ -1066,7 +1390,7 @@ class CarpoolTripMapController extends GetxController {
             child: Text('إلغاء', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton.icon(
-            onPressed: () => _pickupPassenger(passenger),
+            onPressed: () => pickupPassenger(passenger),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
@@ -1079,99 +1403,6 @@ class CarpoolTripMapController extends GetxController {
       ),
       barrierDismissible: false,
     );
-  }
-
-  void _pickupPassenger(AcceptedPassenger passenger) async {
-    try {
-      debugPrint('بدء عملية استلام المستخدم: ${passenger.passengerName}');
-
-      // Update passenger status to picked up
-      passenger.status = 'picked_up';
-      passenger.arrivedAt = DateTime.now().toIso8601String();
-
-      // Remove passenger marker from map
-      _markers.removeWhere((marker) =>
-          marker.markerId.value == 'passenger_${passenger.passengerId}');
-
-      // Remove from nearby passengers list
-      _nearbyPassengers.remove(passenger);
-
-      // Close dialog
-      _isProximityDialogShowing.value = false;
-      Get.back();
-
-      // Show success message
-      Get.showSnackbar(
-        GetSnackBar(
-          title: 'تم الاستلام بنجاح',
-          message: 'تم استلام ${passenger.passengerName ?? 'المستخدم'} بنجاح',
-          duration: Duration(seconds: 3),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      // Send pickup notification to passenger
-      await _sendPickupNotification(passenger);
-
-      // Update map and UI
-      update();
-
-      debugPrint('تم استلام المستخدم بنجاح: ${passenger.passengerName}');
-    } catch (e) {
-      debugPrint('خطأ في استلام المستخدم: $e');
-      Get.showSnackbar(
-        GetSnackBar(
-          title: 'خطأ',
-          message: 'حدث خطأ أثناء استلام المستخدم',
-          duration: Duration(seconds: 3),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _sendPickupNotification(AcceptedPassenger passenger) async {
-    try {
-      debugPrint('إرسال إشعار الاستلام للمستخدم: ${passenger.passengerId}');
-
-      // هنا يمكنك إضافة استدعاء API لإرسال إشعار للمستخدم
-      // مثال:
-      // final response = await http.post(
-      //   Uri.parse('${AppConstants.baseUrl}/api/driver/pickup-passenger'),
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': 'Bearer ${Get.find<AuthController>().token}',
-      //   },
-      //   body: json.encode({
-      //     'passenger_id': passenger.passengerId,
-      //     'trip_id': _currentTrip.routeId,
-      //     'pickup_time': DateTime.now().toIso8601String(),
-      //     'driver_location': {
-      //       'lat': _driverPosition.value?.latitude,
-      //       'lng': _driverPosition.value?.longitude,
-      //     },
-      //   }),
-      // );
-
-      // if (response.statusCode == 200) {
-      //   debugPrint('تم إرسال إشعار الاستلام بنجاح');
-      // } else {
-      //   debugPrint('فشل في إرسال إشعار الاستلام: ${response.statusCode}');
-      // }
-
-      // إرسال إشعار محلي للمستخدم
-      Get.showSnackbar(
-        GetSnackBar(
-          title: 'تم إرسال إشعار الاستلام',
-          message:
-              'تم إرسال إشعار الاستلام إلى ${passenger.passengerName ?? 'المستخدم'}',
-          duration: Duration(seconds: 2),
-          backgroundColor: Colors.blue,
-        ),
-      );
-    } catch (e) {
-      debugPrint('خطأ في إرسال إشعار الاستلام: $e');
-    }
   }
 
   // Helper method for building info rows in dialog
