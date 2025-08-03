@@ -695,7 +695,7 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
                   surface: Theme.of(context).cardColor,
                   onSurface: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
-            dialogTheme: DialogTheme(
+            dialogTheme: DialogThemeData(
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             ),
           ),
@@ -718,7 +718,7 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
                     surface: Theme.of(context).cardColor,
                     onSurface: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
-              dialogTheme: DialogTheme(
+              dialogTheme: DialogThemeData(
                 backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               ),
             ),
