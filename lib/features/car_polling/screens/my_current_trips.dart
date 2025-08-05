@@ -5,6 +5,7 @@ import '../../../util/dimensions.dart';
 import '../../../util/styles.dart';
 import '../controllers/current_trips_controller.dart';
 import '../domain/models/current_trips_with_passengers_response_model.dart';
+import '../domain/models/carpool_routes_response_model.dart';
 import 'carpool_trip_map_screen.dart';
 
 class MyCurrentTripsScreen extends StatefulWidget {
@@ -22,7 +23,7 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
 
     // Get or create the controller
     try {
@@ -101,10 +102,8 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
                     fontSize: Dimensions.fontSizeSmall,
                   ),
                   tabs: [
-                    Tab(text: 'all'.tr),
-                    Tab(text: 'scheduled'.tr),
-                    Tab(text: 'ongoing'.tr),
                     Tab(text: 'pending'.tr),
+                    Tab(text: 'ongoing'.tr),
                     Tab(text: 'completed'.tr),
                   ],
                 ),
@@ -115,10 +114,8 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildTripsListView(ctrl, ctrl.currentTrips),
-                    _buildTripsListView(ctrl, ctrl.scheduledTripsList),
-                    _buildTripsListView(ctrl, ctrl.ongoingTripsList),
                     _buildTripsListView(ctrl, ctrl.pendingTripsList),
+                    _buildTripsListView(ctrl, ctrl.ongoingTripsList),
                     _buildTripsListView(ctrl, ctrl.completedTripsList),
                   ],
                 ),
@@ -135,61 +132,7 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
       padding: const EdgeInsets.all(Dimensions.paddingSizeLarge),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'trip_statistics'.tr,
-            style: textBold.copyWith(
-              fontSize: Dimensions.fontSizeLarge,
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(height: Dimensions.paddingSizeDefault),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  'total_trips'.tr,
-                  controller.totalTrips.toString(),
-                  Icons.directions_car,
-                  Colors.blue,
-                ),
-              ),
-              const SizedBox(width: Dimensions.paddingSizeSmall),
-              Expanded(
-                child: _buildStatCard(
-                  'ongoing'.tr,
-                  controller.ongoingTrips.toString(),
-                  Icons.play_arrow,
-                  Colors.green,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Dimensions.paddingSizeSmall),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  'upcoming'.tr,
-                  controller.upcomingTrips.toString(),
-                  Icons.schedule,
-                  Colors.orange,
-                ),
-              ),
-              const SizedBox(width: Dimensions.paddingSizeSmall),
-              Expanded(
-                child: _buildStatCard(
-                  'completed'.tr,
-                  controller.completedTrips.toString(),
-                  Icons.check_circle,
-                  Colors.purple,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Dimensions.paddingSizeSmall),
-          _buildEarningsCard(controller),
-        ],
+        children: [],
       ),
     );
   }
@@ -259,7 +202,7 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
                   ),
                 ),
                 Text(
-                  '${controller.totalEarnings.toStringAsFixed(2)} EGP',
+                  '${(controller.totalEarnings).toStringAsFixed(2)} EGP',
                   style: textBold.copyWith(
                     color: Colors.white,
                     fontSize: Dimensions.fontSizeExtraLarge,
@@ -358,14 +301,14 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
                       Row(
                         children: [
                           Text(
-                            'trip_route_id'.tr,
+                            'trip_id'.tr,
                             style: textRegular.copyWith(
                               fontSize: Dimensions.fontSizeSmall,
                               color: Theme.of(context).hintColor,
                             ),
                           ),
                           Text(
-                            ' #${trip.routeId}',
+                            ' #${trip.id}',
                             style: textMedium.copyWith(
                               fontSize: Dimensions.fontSizeSmall,
                               color: Theme.of(context).primaryColor,
@@ -408,10 +351,6 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
                     horizontal: Dimensions.paddingSizeSmall,
                     vertical: 4,
                   ),
-                  decoration: BoxDecoration(
-                    color: controller.getTripStatusColor(trip.tripStatus),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                   child: Text(
                     controller.getTripStatusDisplayText(trip.tripStatus),
                     style: textMedium.copyWith(
@@ -437,26 +376,93 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
                 // Trip Details
                 _buildTripDetailsSection(controller, trip),
 
-                if (controller.tripHasPassengers(trip)) ...[
+                // لا تعرض الركاب إذا كانت القائمة فارغة
+                if (controller.tripHasPassengers(trip) ||
+                    (trip.pendingPassengers != null &&
+                        trip.pendingPassengers!.isNotEmpty)) ...[
                   const SizedBox(height: Dimensions.paddingSizeDefault),
                   _buildPassengersSection(controller, trip),
                 ],
 
-                if (trip.restStops != null && trip.restStops!.isNotEmpty) ...[
+                // Start Trip Button for Pending Trips
+                if (controller.getTripStatus(trip) == 'pending') ...[
                   const SizedBox(height: Dimensions.paddingSizeDefault),
-                  _buildRestStopsSection(trip),
-                ],
-
-                // Start Trip Button for Scheduled Trips
-                if (trip.tripStatus?.toLowerCase() == 'scheduled') ...[
-                  const SizedBox(height: Dimensions.paddingSizeDefault),
-                  _buildStartTripButton(controller, trip),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => controller.startTrip(trip.id ?? 0),
+                      icon: const Icon(Icons.play_arrow, color: Colors.white),
+                      label: Text(
+                        'Start Trip',
+                        style: textMedium.copyWith(
+                          color: Colors.white,
+                          fontSize: Dimensions.fontSizeDefault,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: Dimensions.paddingSizeDefault,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                              Dimensions.paddingSizeSmall),
+                        ),
+                        elevation: 4,
+                      ),
+                    ),
+                  ),
                 ],
 
                 // Show Map Button for Ongoing Trips
-                if (trip.tripStatus?.toLowerCase() == 'ongoing') ...[
+                if (controller.getTripStatus(trip) == 'ongoing') ...[
                   const SizedBox(height: Dimensions.paddingSizeDefault),
-                  _buildShowMapButton(trip),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // تحقق من وجود إحداثيات قبل فتح الخريطة
+                        if (trip.startCoordinates != null &&
+                            trip.endCoordinates != null) {
+                          Get.to(() => CarpoolTripMapScreen(trip: trip));
+                        } else {
+                          Get.showSnackbar(GetSnackBar(
+                            title: 'خطأ',
+                            message: 'لا توجد إحداثيات للمسار',
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: Colors.red,
+                          ));
+                        }
+                      },
+                      icon: const Icon(Icons.map, color: Colors.white),
+                      label: Text(
+                        'View Trip',
+                        style: textMedium.copyWith(
+                          color: Colors.white,
+                          fontSize: Dimensions.fontSizeDefault,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: Dimensions.paddingSizeDefault,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                              Dimensions.paddingSizeSmall),
+                        ),
+                        elevation: 4,
+                      ),
+                    ),
+                  ),
+                ],
+
+                // Show Trip Path Button for Completed Trips
+                if (trip.tripStatus == 'completed') ...[
+                  const SizedBox(height: Dimensions.paddingSizeDefault),
+                  _buildShowTripPathButton(trip),
                 ],
               ],
             ),
@@ -534,13 +540,6 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
             children: [
               Expanded(
                 child: _buildDetailItem(
-                  'price_per_seat'.tr,
-                  '${trip.price?.toStringAsFixed(2) ?? '0'} EGP',
-                  Icons.attach_money,
-                ),
-              ),
-              Expanded(
-                child: _buildDetailItem(
                   'available_seats'.tr,
                   '${controller.getAvailableSeats(trip)}',
                   Icons.airline_seat_recline_normal,
@@ -554,14 +553,14 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
               Expanded(
                 child: _buildDetailItem(
                   'passengers'.tr,
-                  '${trip.totalAcceptedPassengers ?? 0}',
+                  '${trip.totalAcceptedPassengers}',
                   Icons.people,
                 ),
               ),
               Expanded(
                 child: _buildDetailItem(
                   'total_fare'.tr,
-                  '${trip.totalFareFromPassengers?.toStringAsFixed(2) ?? '0'} EGP',
+                  '${trip.price?.toStringAsFixed(2) ?? '0'} EGP',
                   Icons.account_balance_wallet,
                 ),
               ),
@@ -698,7 +697,10 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
           ),
         ),
         const SizedBox(height: Dimensions.paddingSizeSmall),
-        ...trip.acceptedPassengers!
+        ...(trip.acceptedPassengers ?? [])
+            .map((passenger) => _buildPassengerCard(controller, passenger))
+            .toList(),
+        ...(trip.pendingPassengers ?? [])
             .map((passenger) => _buildPassengerCard(controller, passenger))
             .toList(),
       ],
@@ -706,7 +708,7 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
   }
 
   Widget _buildPassengerCard(
-      CurrentTripsController controller, AcceptedPassenger passenger) {
+      CurrentTripsController controller, dynamic passenger) {
     return Container(
       margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
       padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
@@ -724,10 +726,10 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
                 radius: 20,
                 backgroundColor:
                     Theme.of(context).primaryColor.withOpacity(0.1),
-                backgroundImage: passenger.profileImage != null
-                    ? NetworkImage(passenger.profileImage!)
+                backgroundImage: _getPassengerProfileImage(passenger) != null
+                    ? NetworkImage(_getPassengerProfileImage(passenger)!)
                     : null,
-                child: passenger.profileImage == null
+                child: _getPassengerProfileImage(passenger) == null
                     ? Icon(
                         Icons.person,
                         color: Theme.of(context).primaryColor,
@@ -743,7 +745,8 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
                       children: [
                         Expanded(
                           child: Text(
-                            passenger.passengerName ?? 'unknown_passenger'.tr,
+                            _getPassengerName(passenger) ??
+                                'unknown_passenger'.tr,
                             style: textMedium.copyWith(
                               fontSize: Dimensions.fontSizeDefault,
                             ),
@@ -755,13 +758,13 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: controller
-                                .getPassengerStatusColor(passenger.status),
+                            color: controller.getPassengerStatusColor(
+                                _getPassengerStatus(passenger)),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             controller.getPassengerStatusDisplayText(
-                                passenger.status),
+                                _getPassengerStatus(passenger)),
                             style: textMedium.copyWith(
                               color: Colors.white,
                               fontSize: Dimensions.fontSizeExtraSmall,
@@ -772,7 +775,7 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      passenger.passengerPhone ?? 'no_phone'.tr,
+                      '${_getPassengerSeats(passenger)} ${'seats'.tr}',
                       style: textRegular.copyWith(
                         fontSize: Dimensions.fontSizeSmall,
                         color: Theme.of(context).hintColor,
@@ -784,106 +787,22 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
             ],
           ),
           const SizedBox(height: Dimensions.paddingSizeSmall),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'seats_count'.tr,
-                      style: textRegular.copyWith(
-                        fontSize: Dimensions.fontSizeExtraSmall,
-                        color: Theme.of(context).hintColor,
-                      ),
-                    ),
-                    Text(
-                      '${passenger.seatsCount ?? 0}',
-                      style: textMedium.copyWith(
-                        fontSize: Dimensions.fontSizeSmall,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'fare'.tr,
-                      style: textRegular.copyWith(
-                        fontSize: Dimensions.fontSizeExtraSmall,
-                        color: Theme.of(context).hintColor,
-                      ),
-                    ),
-                    Text(
-                      '${passenger.fare?.toStringAsFixed(2) ?? '0'} EGP',
-                      style: textMedium.copyWith(
-                        fontSize: Dimensions.fontSizeSmall,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (passenger.otp != null)
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'otp'.tr,
-                        style: textRegular.copyWith(
-                          fontSize: Dimensions.fontSizeExtraSmall,
-                          color: Theme.of(context).hintColor,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: Dimensions.paddingSizeSmall,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              Theme.of(context).primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color:
-                                Theme.of(context).primaryColor.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Text(
-                          passenger.otp!,
-                          style: textBold.copyWith(
-                            fontSize: Dimensions.fontSizeSmall,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          if (passenger.pickupAddress != null) ...[
-            const SizedBox(height: Dimensions.paddingSizeSmall),
-            _buildAddressSection(
-              'pickup_location'.tr,
-              passenger.pickupAddress!,
-              Icons.my_location,
-              Colors.green,
-            ),
-          ],
-          if (passenger.dropoffAddress != null) ...[
-            const SizedBox(height: Dimensions.paddingSizeExtraSmall),
-            _buildAddressSection(
-              'dropoff_location'.tr,
-              passenger.dropoffAddress!,
-              Icons.location_on,
-              Colors.red,
-            ),
-          ],
+          // تفاصيل إضافية للراكب
+          _buildDetailRow('عدد المقاعد', '${_getPassengerSeats(passenger)}'),
+          if (_getPassengerPickupAddress(passenger) != null)
+            _buildDetailRow(
+                'عنوان الاستلام', _getPassengerPickupAddress(passenger)!),
+          if (_getPassengerDropoffAddress(passenger) != null)
+            _buildDetailRow(
+                'عنوان النزول', _getPassengerDropoffAddress(passenger)!),
+          _buildDetailRow('السعر',
+              '${_getPassengerPrice(passenger)?.toStringAsFixed(2) ?? '0'} EGP'),
+          _buildDetailRow(
+              'الحالة',
+              controller.getPassengerStatusDisplayText(
+                  _getPassengerStatus(passenger))),
+          if (_getPassengerId(passenger) != null)
+            _buildDetailRow('Trip ID', _getPassengerId(passenger)!),
         ],
       ),
     );
@@ -922,63 +841,18 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
     );
   }
 
-  Widget _buildRestStopsSection(CurrentTrip trip) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'rest_stops'.tr,
-          style: textMedium.copyWith(
-            fontSize: Dimensions.fontSizeDefault,
-            color: Theme.of(context).primaryColor,
-          ),
-        ),
-        const SizedBox(height: Dimensions.paddingSizeSmall),
-        ...trip.restStops!
-            .map((stop) => Container(
-                  margin: const EdgeInsets.only(
-                      bottom: Dimensions.paddingSizeExtraSmall),
-                  padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius:
-                        BorderRadius.circular(Dimensions.paddingSizeSmall),
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.local_gas_station,
-                        color: Theme.of(context).primaryColor,
-                        size: 16,
-                      ),
-                      const SizedBox(width: Dimensions.paddingSizeSmall),
-                      Expanded(
-                        child: Text(
-                          stop.name ?? 'unnamed_stop'.tr,
-                          style: textRegular.copyWith(
-                            fontSize: Dimensions.fontSizeSmall,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ))
-            .toList(),
-      ],
-    );
-  }
+  // Rest stops section removed as it's not available in new API structure
 
   Widget _buildStartTripButton(
       CurrentTripsController controller, CurrentTrip trip) {
-    final bool isStarting = controller.isTripBeingStarted(trip.routeId ?? 0);
+    final bool isStarting = controller.isTripBeingStarted(trip.id ?? 0);
 
     return Container(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: isStarting || trip.routeId == null
+        onPressed: isStarting || trip.id == null
             ? null
-            : () => controller.startTrip(trip.routeId!),
+            : () => controller.startTrip(trip.id!),
         icon: isStarting
             ? SizedBox(
                 width: 20,
@@ -1020,7 +894,7 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
         },
         icon: Icon(Icons.map, color: Colors.white),
         label: Text(
-          'show_map'.tr,
+          'view_trip'.tr,
           style: textMedium.copyWith(
             color: Colors.white,
             fontSize: Dimensions.fontSizeDefault,
@@ -1039,5 +913,128 @@ class _MyCurrentTripsScreenState extends State<MyCurrentTripsScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildShowTripPathButton(CurrentTrip trip) {
+    return Container(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          // TODO: Navigate to trip path screen
+          Get.showSnackbar(GetSnackBar(
+            title: 'info'.tr,
+            message: 'trip_path_feature_coming_soon'.tr,
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.blue,
+          ));
+        },
+        icon: Icon(Icons.route, color: Colors.white),
+        label: Text(
+          'show_trip_path'.tr,
+          style: textMedium.copyWith(
+            color: Colors.white,
+            fontSize: Dimensions.fontSizeDefault,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(
+            vertical: Dimensions.paddingSizeDefault,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Dimensions.paddingSizeSmall),
+          ),
+          elevation: 4,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label: ', style: textMedium.copyWith(fontSize: 14)),
+          Expanded(
+              child: Text(value, style: textRegular.copyWith(fontSize: 14))),
+        ],
+      ),
+    );
+  }
+
+  // Helper methods to get passenger data regardless of type
+  String? _getPassengerName(dynamic passenger) {
+    if (passenger is AcceptedPassenger) {
+      return passenger.name;
+    } else if (passenger is Passenger) {
+      return passenger.name;
+    }
+    return null;
+  }
+
+  String? _getPassengerStatus(dynamic passenger) {
+    if (passenger is AcceptedPassenger) {
+      return passenger.status;
+    } else if (passenger is Passenger) {
+      return 'pending'; // Default status for Passenger type
+    }
+    return null;
+  }
+
+  int? _getPassengerSeats(dynamic passenger) {
+    if (passenger is AcceptedPassenger) {
+      return passenger.seatsCount;
+    } else if (passenger is Passenger) {
+      return passenger.seatsCount;
+    }
+    return null;
+  }
+
+  double? _getPassengerPrice(dynamic passenger) {
+    if (passenger is AcceptedPassenger) {
+      return passenger.price;
+    } else if (passenger is Passenger) {
+      return passenger.fare;
+    }
+    return null;
+  }
+
+  String? _getPassengerPickupAddress(dynamic passenger) {
+    if (passenger is AcceptedPassenger) {
+      return passenger.pickupAddress;
+    } else if (passenger is Passenger) {
+      return passenger.pickupAddress;
+    }
+    return null;
+  }
+
+  String? _getPassengerDropoffAddress(dynamic passenger) {
+    if (passenger is AcceptedPassenger) {
+      return passenger.dropoffAddress;
+    } else if (passenger is Passenger) {
+      return passenger.dropoffAddress;
+    }
+    return null;
+  }
+
+  String? _getPassengerProfileImage(dynamic passenger) {
+    if (passenger is AcceptedPassenger) {
+      return passenger.profileImage;
+    } else if (passenger is Passenger) {
+      return passenger.profileImage;
+    }
+    return null;
+  }
+
+  String? _getPassengerId(dynamic passenger) {
+    if (passenger is AcceptedPassenger) {
+      return passenger.carpoolTripId;
+    } else if (passenger is Passenger) {
+      return passenger.carpoolPassengerId?.toString();
+    }
+    return null;
   }
 }

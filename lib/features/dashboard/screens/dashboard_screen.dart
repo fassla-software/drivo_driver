@@ -39,8 +39,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           inactiveIcon: Images.activityOutline,
           screen: const TripHistoryMenu()),
       NavigationModel(
-          name: 'register_route'.tr,
-          activeIcon: Images.car,
+          name: 'car_pool'.tr,
+          activeIcon: Images.carTop,
           inactiveIcon: Images.car,
           screen: const AllTripsScreen()),
       NavigationModel(

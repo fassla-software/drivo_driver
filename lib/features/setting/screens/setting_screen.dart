@@ -88,27 +88,27 @@ class SettingScreen extends StatelessWidget {
                   })
                 ]),
           ),
-          Padding(
-            padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-            child: Row(children: [
-              SizedBox(
-                  width: Dimensions.iconSizeMedium,
-                  child: Image.asset(
-                    Images.themeIcon,
-                    color: Theme.of(context).primaryColor,
-                  )),
-              SizedBox(
-                  width: Get.find<LocalizationController>().isLtr
-                      ? 0
-                      : Dimensions.paddingSizeSmall),
-              Padding(
-                padding:
-                    const EdgeInsets.only(left: Dimensions.paddingSizeSmall),
-                child: Text('theme'.tr),
-              )
-            ]),
-          ),
-          const ThemeChangeWidget(),
+          // Padding(
+          //   padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+          //   child: Row(children: [
+          //     SizedBox(
+          //         width: Dimensions.iconSizeMedium,
+          //         child: Image.asset(
+          //           Images.themeIcon,
+          //           color: Theme.of(context).primaryColor,
+          //         )),
+          //     SizedBox(
+          //         width: Get.find<LocalizationController>().isLtr
+          //             ? 0
+          //             : Dimensions.paddingSizeSmall),
+          //     Padding(
+          //       padding:
+          //           const EdgeInsets.only(left: Dimensions.paddingSizeSmall),
+          //       child: Text('theme'.tr),
+          //     )
+          //   ]),
+          // ),
+          // const ThemeChangeWidget(),
         ]);
       }),
     );

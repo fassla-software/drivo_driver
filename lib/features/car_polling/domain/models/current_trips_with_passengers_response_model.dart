@@ -1,10 +1,12 @@
+import '../models/carpool_routes_response_model.dart';
+
 class CurrentTripsWithPassengersResponseModel {
   String? responseCode;
   String? message;
   int? totalSize;
   String? limit;
   String? offset;
-  CurrentTripsData? data;
+  List<CurrentTrip>? data;
   List<dynamic>? errors;
 
   CurrentTripsWithPassengersResponseModel({
@@ -25,8 +27,11 @@ class CurrentTripsWithPassengersResponseModel {
       totalSize: json['total_size'],
       limit: json['limit'],
       offset: json['offset'],
-      data:
-          json['data'] != null ? CurrentTripsData.fromJson(json['data']) : null,
+      data: json['data'] != null
+          ? (json['data'] as List)
+              .map((item) => CurrentTrip.fromJson(item))
+              .toList()
+          : null,
       errors: json['errors'],
     );
   }
@@ -38,7 +43,7 @@ class CurrentTripsWithPassengersResponseModel {
       'total_size': totalSize,
       'limit': limit,
       'offset': offset,
-      'data': data?.toJson(),
+      'data': data?.map((item) => item.toJson()).toList(),
       'errors': errors,
     };
   }
@@ -84,16 +89,57 @@ class CurrentTripsData {
   }
 }
 
+class PassengerCoordinate {
+  String? type;
+  String? passengerId;
+  List<double>? pickupCoordinates;
+  List<double>? dropoffCoordinates;
+  String? address;
+
+  PassengerCoordinate({
+    this.type,
+    this.passengerId,
+    this.pickupCoordinates,
+    this.dropoffCoordinates,
+    this.address,
+  });
+
+  factory PassengerCoordinate.fromJson(Map<String, dynamic> json) {
+    return PassengerCoordinate(
+      type: json['type'],
+      passengerId: json['passenger_id'],
+      pickupCoordinates: json['pickup_coordinates'] != null
+          ? List<double>.from(json['pickup_coordinates'])
+          : null,
+      dropoffCoordinates: json['dropoff_coordinates'] != null
+          ? List<double>.from(json['dropoff_coordinates'])
+          : null,
+      address: json['address'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'passenger_id': passengerId,
+      'pickup_coordinates': pickupCoordinates,
+      'dropoff_coordinates': dropoffCoordinates,
+      'address': address,
+    };
+  }
+}
+
 class CurrentTrip {
   int? routeId;
   String? tripStatus;
   String? startTime;
   String? endTime;
   String? tripStartedAt;
+  int? isTripStarted;
   String? startAddress;
   String? endAddress;
-  TripCoordinates? startCoordinates;
-  TripCoordinates? endCoordinates;
+  List<double>? startCoordinates; // <-- تحديث هنا
+  List<double>? endCoordinates; // <-- تحديث هنا
   double? price;
   int? seatsAvailable;
   int? totalAcceptedPassengers;
@@ -102,6 +148,7 @@ class CurrentTrip {
   RoutePreferences? routePreferences;
   List<RestStop>? restStops;
   List<AcceptedPassenger>? acceptedPassengers;
+  List<Passenger>? pendingPassengers;
 
   CurrentTrip({
     this.routeId,
@@ -109,6 +156,7 @@ class CurrentTrip {
     this.startTime,
     this.endTime,
     this.tripStartedAt,
+    this.isTripStarted,
     this.startAddress,
     this.endAddress,
     this.startCoordinates,
@@ -121,30 +169,41 @@ class CurrentTrip {
     this.routePreferences,
     this.restStops,
     this.acceptedPassengers,
+    this.pendingPassengers,
   });
 
   factory CurrentTrip.fromJson(Map<String, dynamic> json) {
     return CurrentTrip(
-      routeId: json['route_id'],
+      routeId: json['route_id'] ?? json['id'],
       tripStatus: json['trip_status'],
       startTime: json['start_time'],
       endTime: json['end_time'],
       tripStartedAt: json['trip_started_at'],
+      isTripStarted: json.containsKey('is_trip_started')
+          ? (json['is_trip_started'] is int
+              ? json['is_trip_started']
+              : int.tryParse(json['is_trip_started']?.toString() ?? '0'))
+          : 0,
       startAddress: json['start_address'],
       endAddress: json['end_address'],
       startCoordinates: json['start_coordinates'] != null
-          ? TripCoordinates.fromJson(json['start_coordinates'])
+          ? List<double>.from(
+              json['start_coordinates'].map((x) => x.toDouble()))
           : null,
       endCoordinates: json['end_coordinates'] != null
-          ? TripCoordinates.fromJson(json['end_coordinates'])
+          ? List<double>.from(json['end_coordinates'].map((x) => x.toDouble()))
           : null,
       price: json['price']?.toDouble(),
-      seatsAvailable: json['seats_available'],
-      totalAcceptedPassengers: json['total_accepted_passengers'],
+      seatsAvailable:
+          json['available_seats'] ?? json['seats_available'] ?? json['seats'],
+      totalAcceptedPassengers:
+          json['total_accepted_passengers'] ?? json['passengers_count'],
       totalFareFromPassengers: json['total_fare_from_passengers']?.toDouble(),
       vehicleInfo: json['vehicle_info'] != null
           ? VehicleInfo.fromJson(json['vehicle_info'])
-          : null,
+          : (json['vehicle_name'] != null
+              ? VehicleInfo(brand: json['vehicle_name'])
+              : null),
       routePreferences: json['route_preferences'] != null
           ? RoutePreferences.fromJson(json['route_preferences'])
           : null,
@@ -158,6 +217,11 @@ class CurrentTrip {
               .map((item) => AcceptedPassenger.fromJson(item))
               .toList()
           : null,
+      pendingPassengers: json['passengers'] != null
+          ? (json['passengers'] as List)
+              .map((item) => Passenger.fromJson(item))
+              .toList()
+          : null,
     );
   }
 
@@ -168,10 +232,11 @@ class CurrentTrip {
       'start_time': startTime,
       'end_time': endTime,
       'trip_started_at': tripStartedAt,
+      'is_trip_started': isTripStarted,
       'start_address': startAddress,
       'end_address': endAddress,
-      'start_coordinates': startCoordinates?.toJson(),
-      'end_coordinates': endCoordinates?.toJson(),
+      'start_coordinates': startCoordinates,
+      'end_coordinates': endCoordinates,
       'price': price,
       'seats_available': seatsAvailable,
       'total_accepted_passengers': totalAcceptedPassengers,
@@ -181,8 +246,23 @@ class CurrentTrip {
       'rest_stops': restStops?.map((item) => item.toJson()).toList(),
       'accepted_passengers':
           acceptedPassengers?.map((item) => item.toJson()).toList(),
+      'passengers': pendingPassengers?.map((item) => item.toJson()).toList(),
     };
   }
+
+  // Helper methods for backward compatibility
+  int get id => routeId ?? 0;
+  int get totalAcceptedPassengersCount => totalAcceptedPassengers ?? 0;
+  double get totalFareFromPassengersAmount => totalFareFromPassengers ?? 0.0;
+  int get seatsAvailableCount => seatsAvailable ?? 0;
+  List<AcceptedPassenger>? get passengers => acceptedPassengers;
+  List<Passenger>? get pendingPassengersList => pendingPassengers;
+  String? get vehicleName => vehicleInfo?.model != null
+      ? '${vehicleInfo!.brand}-${vehicleInfo!.model}'
+      : vehicleInfo?.brand;
+
+  // Helper for price
+  double? get priceAmount => price;
 }
 
 class TripCoordinates {
@@ -303,77 +383,89 @@ class RestStop {
 }
 
 class AcceptedPassenger {
-  int? passengerId;
-  String? passengerName;
-  String? passengerPhone;
-  String? profileImage;
-  int? seatsCount;
-  double? fare;
-  String? status;
+  String? carpoolTripId;
+  String? name;
   String? pickupAddress;
-  String? dropoffAddress;
-  TripCoordinates? pickupCoordinates;
-  TripCoordinates? dropoffCoordinates;
-  String? otp;
-  String? arrivedAt;
-  String? leftAt;
+  int? seatsCount;
+  List<double>? startCoordinates;
+  List<double>? endCoordinates;
+  double? price;
+  String? status;
+  String? profileImage;
 
   AcceptedPassenger({
-    this.passengerId,
-    this.passengerName,
-    this.passengerPhone,
-    this.profileImage,
-    this.seatsCount,
-    this.fare,
-    this.status,
+    this.carpoolTripId,
+    this.name,
     this.pickupAddress,
-    this.dropoffAddress,
-    this.pickupCoordinates,
-    this.dropoffCoordinates,
-    this.otp,
-    this.arrivedAt,
-    this.leftAt,
+    this.seatsCount,
+    this.startCoordinates,
+    this.endCoordinates,
+    this.price,
+    this.status,
+    this.profileImage,
   });
 
   factory AcceptedPassenger.fromJson(Map<String, dynamic> json) {
     return AcceptedPassenger(
-      passengerId: json['passenger_id'],
-      passengerName: json['passenger_name'],
-      passengerPhone: json['passenger_phone'],
-      profileImage: json['profile_image'],
-      seatsCount: json['seats_count'],
-      fare: json['fare']?.toDouble(),
-      status: json['status'],
+      carpoolTripId: json['carpool_trip_id'],
+      name: json['name'],
       pickupAddress: json['pickup_address'],
-      dropoffAddress: json['dropoff_address'],
-      pickupCoordinates: json['pickup_coordinates'] != null
-          ? TripCoordinates.fromJson(json['pickup_coordinates'])
+      seatsCount: json['seats_count'],
+      startCoordinates: json['start_coordinates'] != null
+          ? List<double>.from(json['start_coordinates'])
           : null,
-      dropoffCoordinates: json['dropoff_coordinates'] != null
-          ? TripCoordinates.fromJson(json['dropoff_coordinates'])
+      endCoordinates: json['end_coordinates'] != null
+          ? List<double>.from(json['end_coordinates'])
           : null,
-      otp: json['otp'],
-      arrivedAt: json['arrived_at'],
-      leftAt: json['left_at'],
+      price: json['price']?.toDouble(),
+      status: json['status'],
+      profileImage: json['profile_image'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'passenger_id': passengerId,
-      'passenger_name': passengerName,
-      'passenger_phone': passengerPhone,
-      'profile_image': profileImage,
-      'seats_count': seatsCount,
-      'fare': fare,
-      'status': status,
+      'carpool_trip_id': carpoolTripId,
+      'name': name,
       'pickup_address': pickupAddress,
-      'dropoff_address': dropoffAddress,
-      'pickup_coordinates': pickupCoordinates?.toJson(),
-      'dropoff_coordinates': dropoffCoordinates?.toJson(),
-      'otp': otp,
-      'arrived_at': arrivedAt,
-      'left_at': leftAt,
+      'seats_count': seatsCount,
+      'start_coordinates': startCoordinates,
+      'end_coordinates': endCoordinates,
+      'price': price,
+      'status': status,
+      'profile_image': profileImage,
     };
   }
+
+  // Helper getters for backward compatibility
+  int? get passengerId => null;
+  String? get passengerName => name;
+  String? get passengerPhone => null;
+  String? get dropoffAddress => null;
+  TripCoordinates? get pickupCoordinates {
+    if (startCoordinates != null && startCoordinates!.length >= 2) {
+      return TripCoordinates(
+        lat: startCoordinates![1], // longitude is first in API response
+        lng: startCoordinates![0], // latitude is second in API response
+      );
+    }
+    return null;
+  }
+
+  TripCoordinates? get dropoffCoordinates {
+    if (endCoordinates != null && endCoordinates!.length >= 2) {
+      return TripCoordinates(
+        lat: endCoordinates![1], // longitude is first in API response
+        lng: endCoordinates![0], // latitude is second in API response
+      );
+    }
+    return null;
+  }
+
+  String? get otp => null;
+  String? get arrivedAt => null;
+  String? get leftAt => null;
+  double? get fare => price;
+  double? get estimatedFare => price;
+  double? get actualFare => price;
 }

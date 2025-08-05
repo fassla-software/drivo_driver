@@ -12,6 +12,7 @@ import 'package:ride_sharing_user_app/features/map/controllers/map_controller.da
 import 'package:ride_sharing_user_app/features/map/widgets/custom_icon_card_widget.dart';
 import 'package:ride_sharing_user_app/features/map/widgets/driver_header_info_widget.dart';
 import 'package:ride_sharing_user_app/features/map/widgets/expendale_bottom_sheet_widget.dart';
+import 'package:ride_sharing_user_app/features/profile/controllers/profile_controller.dart';
 import 'package:ride_sharing_user_app/features/profile/screens/profile_screen.dart';
 import 'package:ride_sharing_user_app/features/ride/controllers/ride_controller.dart';
 import 'package:ride_sharing_user_app/features/ride/screens/ride_request_list_screen.dart';
@@ -37,6 +38,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _findingCurrentRoute();
+    Get.find<ProfileController>().stopLocationRecord();
   }
 
   _findingCurrentRoute() {
@@ -81,6 +83,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     if (_locationSubscription != null) {
       _locationSubscription!.cancel();
     }
+    Get.find<ProfileController>().startLocationRecord();
+
     super.dispose();
   }
 
@@ -114,25 +118,62 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       Uint8List imageData = await getMarker();
       var location = await Geolocator.getCurrentPosition();
       updateMarkerAndCircle(location, imageData);
+
       if (_locationSubscription != null) {
         _locationSubscription!.cancel();
       }
 
-      _locationSubscription =
-          Geolocator.getPositionStream().listen((newLocalData) {
-        if (_controller != null) {
-          _controller!.moveCamera(CameraUpdate.newCameraPosition(CameraPosition(
-              bearing: 192.8334901395799,
-              target: LatLng(newLocalData.latitude, newLocalData.longitude),
-              tilt: 0,
-              zoom: 16)));
-          updateMarkerAndCircle(newLocalData, imageData);
+      _locationSubscription = Geolocator.getPositionStream(
+        locationSettings: LocationSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 1,
+        ),
+      ).listen((newLocalData) {
+        if (_controller != null && mounted) {
+          try {
+
+            Get.find<RideController>()
+                .remainingDistance(Get.find<RideController>().tripDetail!.id!);
+      Get.find<LocationController>().getCurrentLocation(callZone: false);
+
+            _controller!.moveCamera(CameraUpdate.newCameraPosition(
+                CameraPosition(
+                    bearing: 192.8334901395799,
+                    target:
+                        LatLng(newLocalData.latitude, newLocalData.longitude),
+                    tilt: 0,
+                    zoom: 16)));
+
+            updateMarkerAndCircle(newLocalData, imageData);
+          } catch (e) {
+            debugPrint('Camera move error: $e');
+            // Optionally retry after a delay
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (_controller != null && mounted) {
+                try {
+                  _controller!.moveCamera(CameraUpdate.newCameraPosition(
+                      CameraPosition(
+                          target: LatLng(
+                              newLocalData.latitude, newLocalData.longitude),
+                          zoom: 16)));
+                } catch (retryError) {
+                  debugPrint('Retry camera move failed: $retryError');
+                }
+              }
+            });
+          }
         }
+      }, onError: (error) {
+        debugPrint('Location stream error: $error');
       });
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
         debugPrint("Permission Denied");
+      } else {
+        debugPrint("Platform exception: $e");
       }
+    } catch (e) {
+      debugPrint("General error in getCurrentLocation: $e");
     }
   }
 
@@ -184,24 +225,34 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                         zoom: 16,
                       ),
                       onMapCreated: (GoogleMapController controller) async {
-                        riderMapController.mapController = controller;
-                        if (riderMapController.currentRideState.name !=
-                            'initial') {
-                          if (riderMapController.currentRideState.name ==
-                                  'accepted' ||
-                              riderMapController.currentRideState.name ==
-                                  'ongoing') {
-                            Get.find<RideController>().remainingDistance(
-                                Get.find<RideController>().tripDetail!.id!,
-                                mapBound: true);
+                        try {
+                          riderMapController.mapController = controller;
+                          _mapController = controller;
+                          _controller = controller;
+
+                          // Add a small delay to ensure map is fully ready
+                          await Future.delayed(
+                              const Duration(milliseconds: 100));
+
+                          if (riderMapController.currentRideState.name !=
+                              'initial') {
+                            if (riderMapController.currentRideState.name ==
+                                    'accepted' ||
+                                riderMapController.currentRideState.name ==
+                                    'ongoing') {
+                              Get.find<RideController>().remainingDistance(
+                                  Get.find<RideController>().tripDetail!.id!,
+                                  mapBound: true);
+                            } else {
+                              riderMapController
+                                  .getPickupToDestinationPolyline();
+                            }
                           } else {
-                            riderMapController.getPickupToDestinationPolyline();
+                            await riderMapController.myCurrentLocation();
                           }
-                        } else {
-                          // Show current location marker when map is created and no active ride
-                          await riderMapController.myCurrentLocation();
+                        } catch (e) {
+                          debugPrint('Error in onMapCreated: $e');
                         }
-                        _mapController = controller;
                       },
                       onCameraMove: (CameraPosition cameraPosition) {},
                       onCameraIdle: () {},

@@ -59,11 +59,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBvgx-R0P0ton_Z9JvpWf8kT_952zqk-B8',
-    appId: '1:643071460200:ios:73cfb32fad0082d7b9ccdd',
+    appId: '1:643071460200:ios:3317a6dcb5747cb5b9ccdd',
     messagingSenderId: '643071460200',
     projectId: 'drivo-41f2e',
     storageBucket: 'drivo-41f2e.firebasestorage.app',
-    iosBundleId: 'com.devu.hwiloDriver',
+    iosBundleId: 'com.drivofasslasaif.driver',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(

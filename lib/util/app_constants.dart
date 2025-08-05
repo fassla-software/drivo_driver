@@ -4,12 +4,14 @@ import 'package:ride_sharing_user_app/util/images.dart';
 class AppConstants {
   static const String appName = 'Drivo Driver';
   static const String baseUrl =
-      'https://drivoeg.com'; /* 'https://drivemond-admin.codemond.com'; */
+      //'https://drivo.loca.lt';
+      'https://drivoeg.com';
+  /* 'https://drivemond-admin.codemond.com'; */
   static const String polylineMapKey =
       'AIzaSyCHj3QwVPXAcG57hgUCowCRtbc4moArVH0';
   /* 'AIzaSyCGSZyU5GjFtJuay5jjqRD-xIr3XhGu1Ek'; */
   //AIzaSyA8Qy5ipfdKm01zA3pDc-bK1ypII3tAKTI
-  static const double appVersion = 2.1;
+  static const double appVersion = 1.0;
 
   /// Flutter SDK 3.24.0
   static const String configUri = '/api/driver/configuration';
@@ -36,7 +38,6 @@ class AppConstants {
   static const String fcmTokenUpdate = '/api/driver/update/fcm-token';
   static const String tripDetails = '/api/driver/ride/details/';
   static const String uploadScreenShots = '/api/ride/store-screenshot';
-  static const String tripAcceptOrReject = '/api/driver/ride/trip-action';
   static const String matchOtp = '/api/driver/ride/match-otp';
   static const String remainDistance = '/api/driver/get-routes';
   static const String tripStatusUpdate = '/api/driver/ride/update-status';
@@ -140,6 +141,9 @@ class AppConstants {
       '/api/driver/current-trips-with-passengers';
   static const String startTripUri = '/api/driver/start-trip';
   static const String reviewPassengerUri = '/api/driver/review';
+
+  static const String rideRequest = '/api/customer/ride/create';
+  static const String tripAcceptOrReject = '/api/driver/ride/trip-action';
 
   // Shared Key
   static const String theme = 'theme';

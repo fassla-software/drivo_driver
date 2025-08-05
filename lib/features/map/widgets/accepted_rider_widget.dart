@@ -14,6 +14,7 @@ import 'package:ride_sharing_user_app/features/map/widgets/parcel_cancelation_li
 import 'package:ride_sharing_user_app/features/map/widgets/ride_cancelation_list.dart';
 import 'package:ride_sharing_user_app/features/map/widgets/otp_verification_widget.dart';
 import 'package:ride_sharing_user_app/features/map/widgets/route_widget.dart';
+import 'package:ride_sharing_user_app/features/profile/controllers/profile_controller.dart';
 import 'package:ride_sharing_user_app/features/ride/controllers/ride_controller.dart';
 import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
 import 'package:ride_sharing_user_app/features/trip/controllers/trip_controller.dart';
@@ -35,14 +36,21 @@ class _RideAcceptedWidgetState extends State<RideAcceptedWidget> {
   String totalDistance = '0', estDistance = '0', removeComma = '0';
   int currentState = 0;
   JustTheController tooltipController = JustTheController();
+  bool _shouldShowTooltip = false;
+
   @override
   void initState() {
     Get.find<RiderMapController>().setSheetHeight(250, false);
+    // Set flag to show tooltip after widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      tooltipController.showTooltip();
+      if (mounted) {
+        tooltipController.showTooltip();
+      }
     });
     super.initState();
   }
+
+ 
 
   @override
   Widget build(BuildContext context) {

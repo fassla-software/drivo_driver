@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.devu.hwiloDriver</string>
+	<string>com.drivofasslasaif.driver</string>
 	<key>PROJECT_ID</key>
 	<string>drivo-41f2e</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:643071460200:ios:73cfb32fad0082d7b9ccdd</string>
+	<string>1:643071460200:ios:3317a6dcb5747cb5b9ccdd</string>
 </dict>
 </plist>

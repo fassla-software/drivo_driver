@@ -80,8 +80,7 @@ class NotificationHelper {
       );
 
       /// Show log for debug
-      print('onMessage: ${message.data}');
-
+      print('onMessage: ${message.data} ${message.notification?.title}');
 
       /// check maintenance mode
       if(!(Get.find<SplashController>().config!.maintenanceMode != null &&
