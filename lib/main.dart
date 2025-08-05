@@ -62,7 +62,7 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   await FlutterDownloader.initialize(debug: true, ignoreSsl: true);
-
+  
   runApp(MyApp(languages: languages, notificationData: remoteMessage?.data));
 
   // Upload cached files on app start

@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/common_widgets/app_bar_widget.dart';
@@ -252,6 +253,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return RefreshIndicator(
       onRefresh: () async {
         Get.find<ProfileController>().getProfileInfo();
+String? fcmToken = await FirebaseMessaging.instance.getToken();
+print('FCM Token: $fcmToken');
       },
       child: Scaffold(
         body: Container(
