@@ -128,7 +128,7 @@ class ZoomDrawer extends StatefulWidget {
 }
 
 class ZoomDrawerState extends State<ZoomDrawer>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _shouldDrag = false;
   late int _slideDirection;
   late final ValueNotifier<bool> _absorbingMainScreen;
@@ -142,6 +142,33 @@ class ZoomDrawerState extends State<ZoomDrawer>
     duration: widget.duration,
     reverseDuration: widget.duration,
   )..addStatusListener(_animationStatusListener);
+
+  // إضافة متحكمات الرسوم المتحركة الجديدة
+  late final AnimationController _glowAnimationController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2000),
+  );
+
+  late final AnimationController _pulseAnimationController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1500),
+  );
+
+  late final Animation<double> _glowAnimation = Tween<double>(
+    begin: 0.0,
+    end: 1.0,
+  ).animate(CurvedAnimation(
+    parent: _glowAnimationController,
+    curve: Curves.easeInOut,
+  ));
+
+  late final Animation<double> _pulseAnimation = Tween<double>(
+    begin: 1.0,
+    end: 1.05,
+  ).animate(CurvedAnimation(
+    parent: _pulseAnimationController,
+    curve: Curves.easeInOut,
+  ));
 
   double get animationValue => _animationController.value;
   DrawerLastAction _drawerLastAction = DrawerLastAction.closed;
@@ -244,13 +271,25 @@ class ZoomDrawerState extends State<ZoomDrawer>
   void open() {
     if (mounted) {
       _animationController.forward();
+      _startGlowAnimation();
     }
   }
 
   void close() {
     if (mounted) {
       _animationController.reverse();
+      _stopGlowAnimation();
     }
+  }
+
+  void _startGlowAnimation() {
+    _glowAnimationController.repeat(reverse: true);
+    _pulseAnimationController.repeat(reverse: true);
+  }
+
+  void _stopGlowAnimation() {
+    _glowAnimationController.stop();
+    _pulseAnimationController.stop();
   }
 
   void toggle({bool forceToggle = false}) {
@@ -328,6 +367,8 @@ class ZoomDrawerState extends State<ZoomDrawer>
     _stateNotifier.dispose();
     _absorbingMainScreen.dispose();
     _animationController.dispose();
+    _glowAnimationController.dispose();
+    _pulseAnimationController.dispose();
     super.dispose();
   }
 
@@ -620,70 +661,184 @@ class ZoomDrawerState extends State<ZoomDrawer>
   Widget _renderDefault() {
     const slidePercent = 15.0;
 
-    return Stack(
-      children: [
-        AnimatedBuilder(
-          animation: _animationController,
-          builder: (_, __) => menuScreenWidget,
-        ),
-        if (widget.showShadow) ...[
-          /// Displaying the first shadow
-          AnimatedBuilder(
-            animation: _animationController,
-            builder: (_, w) => _applyDefaultStyle(
-              w,
-              angle: (widget.angle == 0.0) ? 0.0 : widget.angle - 8,
-              scale: .9,
-              slide: slidePercent * 2,
-            ),
-            child: Container(
-              color: widget.shadowLayer1Color ??
-                  _defaultDrawerShadowsBackgroundColor.withAlpha(60),
-            ),
-          ),
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        _animationController,
+        _glowAnimationController,
+        _pulseAnimationController,
+      ]),
+      builder: (context, _) {
+        return Stack(
+          children: [
+            // خلفية متدرجة للدراور
+            if (animationValue > 0)
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.3 * animationValue),
+                      Colors.black.withValues(alpha: 0.1 * animationValue),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                ),
+              ),
+            
+            menuScreenWidget,
+            
+            if (widget.showShadow) ...[
+              /// Displaying the first shadow with glow effect
+              _applyDefaultStyle(
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        (widget.shadowLayer1Color ??
+                                _defaultDrawerShadowsBackgroundColor.withAlpha(60))
+                            .withValues(alpha: 0.8 + (_glowAnimation.value * 0.2)),
+                        (widget.shadowLayer1Color ??
+                                _defaultDrawerShadowsBackgroundColor.withAlpha(60))
+                            .withValues(alpha: 0.4 + (_glowAnimation.value * 0.1)),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(widget.borderRadius * animationValue),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (widget.shadowLayer1Color ??
+                                _defaultDrawerShadowsBackgroundColor.withAlpha(60))
+                            .withValues(alpha: 0.3 * _glowAnimation.value),
+                        blurRadius: 20 + (_glowAnimation.value * 10),
+                        spreadRadius: 5 + (_glowAnimation.value * 3),
+                      ),
+                    ],
+                  ),
+                ),
+                angle: (widget.angle == 0.0) ? 0.0 : widget.angle - 8,
+                scale: .9 * _pulseAnimation.value,
+                slide: slidePercent * 2,
+              ),
 
-          /// Displaying the second shadow
-          AnimatedBuilder(
-            animation: _animationController,
-            builder: (_, w) => _applyDefaultStyle(
-              w,
-              angle: (widget.angle == 0.0) ? 0.0 : widget.angle - 4.0,
-              scale: .95,
-              slide: slidePercent,
-            ),
-            child: Container(
-              color: widget.shadowLayer2Color ??
-                  _defaultDrawerShadowsBackgroundColor.withAlpha(180),
-            ),
-          )
-        ],
+              /// Displaying the second shadow with enhanced glow
+              _applyDefaultStyle(
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        (widget.shadowLayer2Color ??
+                                _defaultDrawerShadowsBackgroundColor.withAlpha(180))
+                            .withValues(alpha: 0.9 + (_glowAnimation.value * 0.1)),
+                        (widget.shadowLayer2Color ??
+                                _defaultDrawerShadowsBackgroundColor.withAlpha(180))
+                            .withValues(alpha: 0.6 + (_glowAnimation.value * 0.2)),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(widget.borderRadius * animationValue),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (widget.shadowLayer2Color ??
+                                _defaultDrawerShadowsBackgroundColor.withAlpha(180))
+                            .withValues(alpha: 0.4 * _glowAnimation.value),
+                        blurRadius: 15 + (_glowAnimation.value * 8),
+                        spreadRadius: 3 + (_glowAnimation.value * 2),
+                      ),
+                    ],
+                  ),
+                ),
+                angle: (widget.angle == 0.0) ? 0.0 : widget.angle - 4.0,
+                scale: .95 * _pulseAnimation.value,
+                slide: slidePercent,
+              )
+            ],
 
-        /// Displaying the Main screen
-        AnimatedBuilder(
-          animation: _animationController,
-          builder: (_, __) => _applyDefaultStyle(
-            mainScreenWidget,
-          ),
-        ),
-      ],
+            /// Displaying the Main screen with enhanced effects
+            Transform.scale(
+              scale: _pulseAnimation.value,
+              child: _applyDefaultStyle(
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(widget.borderRadius * animationValue),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3 * animationValue),
+                        blurRadius: 20 * animationValue,
+                        offset: Offset(5 * animationValue, 5 * animationValue),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: 0.1 * animationValue),
+                        blurRadius: 10 * animationValue,
+                        offset: Offset(-2 * animationValue, -2 * animationValue),
+                      ),
+                    ],
+                  ),
+                  child: mainScreenWidget,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _renderStyle1() {
     return AnimatedBuilder(
-      animation: _animationController,
+      animation: Listenable.merge([
+        _animationController,
+        _glowAnimationController,
+        _pulseAnimationController,
+      ]),
       builder: (_, __) {
         final xOffset =
             (1 - animationValue) * widget.slideWidth * _slideDirection;
 
         return Stack(
           children: [
+            // خلفية متدرجة
+            if (animationValue > 0)
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.4 * animationValue),
+                      Colors.black.withValues(alpha: 0.2 * animationValue),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            
             mainScreenWidget,
             Transform.translate(
               offset: Offset(-xOffset, 0),
               child: Container(
                 width: widget.slideWidth,
-                color: _defaultMenuBackgroundColor,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      _defaultMenuBackgroundColor,
+                      _defaultMenuBackgroundColor.withValues(alpha: 0.95),
+                      _defaultMenuBackgroundColor.withValues(alpha: 0.9),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.5 * animationValue),
+                      blurRadius: 30 * animationValue,
+                      offset: Offset(10 * animationValue, 0),
+                    ),
+                  ],
+                ),
                 child: menuScreenWidget,
               ),
             ),
@@ -695,7 +850,11 @@ class ZoomDrawerState extends State<ZoomDrawer>
 
   Widget _renderStyle2() {
     return AnimatedBuilder(
-      animation: _animationController,
+      animation: Listenable.merge([
+        _animationController,
+        _glowAnimationController,
+        _pulseAnimationController,
+      ]),
       builder: (_, __) {
         final xPosition = widget.slideWidth * _slideDirection * animationValue;
         final yPosition = animationValue * widget.slideWidth;
@@ -703,13 +862,40 @@ class ZoomDrawerState extends State<ZoomDrawer>
 
         return Stack(
           children: [
+            // خلفية متدرجة
+            if (animationValue > 0)
+              Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.0,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.3 * animationValue),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            
             menuScreenWidget,
             Transform(
               transform: Matrix4.identity()
                 ..translate(xPosition, yPosition)
-                ..scale(scalePercentage),
+                ..scale(scalePercentage * _pulseAnimation.value),
               alignment: Alignment.center,
-              child: mainScreenWidget,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(widget.borderRadius * animationValue),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.4 * animationValue),
+                      blurRadius: 25 * animationValue,
+                      offset: Offset(0, 10 * animationValue),
+                    ),
+                  ],
+                ),
+                child: mainScreenWidget,
+              ),
             ),
           ],
         );
@@ -719,7 +905,11 @@ class ZoomDrawerState extends State<ZoomDrawer>
 
   Widget _renderStyle3() {
     return AnimatedBuilder(
-      animation: _animationController,
+      animation: Listenable.merge([
+        _animationController,
+        _glowAnimationController,
+        _pulseAnimationController,
+      ]),
       builder: (_, __) {
         final xPosition =
             (widget.slideWidth / 2) * animationValue * _slideDirection;
@@ -728,16 +918,43 @@ class ZoomDrawerState extends State<ZoomDrawer>
 
         return Stack(
           children: [
+            // خلفية متدرجة
+            if (animationValue > 0)
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.2 * animationValue),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            
             menuScreenWidget,
             Transform(
               transform: Matrix4.identity()
                 ..setEntry(3, 2, 0.0009)
                 ..translate(xPosition)
-                ..scale(scalePercentage)
+                ..scale(scalePercentage * _pulseAnimation.value)
                 ..rotateY(yAngle),
               alignment:
                   widget.isRtl ? Alignment.centerLeft : Alignment.centerRight,
-              child: mainScreenWidget,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(widget.borderRadius * animationValue),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3 * animationValue),
+                      blurRadius: 20 * animationValue,
+                      offset: Offset(5 * animationValue, 0),
+                    ),
+                  ],
+                ),
+                child: mainScreenWidget,
+              ),
             ),
           ],
         );
@@ -747,7 +964,11 @@ class ZoomDrawerState extends State<ZoomDrawer>
 
   Widget _renderStyle4() {
     return AnimatedBuilder(
-      animation: _animationController,
+      animation: Listenable.merge([
+        _animationController,
+        _glowAnimationController,
+        _pulseAnimationController,
+      ]),
       builder: (_, __) {
         final xPosition =
             (widget.slideWidth * 1.2) * animationValue * _slideDirection;
@@ -756,16 +977,43 @@ class ZoomDrawerState extends State<ZoomDrawer>
 
         return Stack(
           children: [
+            // خلفية متدرجة
+            if (animationValue > 0)
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.25 * animationValue),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            
             menuScreenWidget,
             Transform(
               transform: Matrix4.identity()
                 ..setEntry(3, 2, 0.0009)
                 ..translate(xPosition)
-                ..scale(scalePercentage)
+                ..scale(scalePercentage * _pulseAnimation.value)
                 ..rotateY(-yAngle),
               alignment:
                   widget.isRtl ? Alignment.centerRight : Alignment.centerLeft,
-              child: mainScreenWidget,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(widget.borderRadius * animationValue),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35 * animationValue),
+                      blurRadius: 30 * animationValue,
+                      offset: Offset(-10 * animationValue, 0),
+                    ),
+                  ],
+                ),
+                child: mainScreenWidget,
+              ),
             ),
           ],
         );

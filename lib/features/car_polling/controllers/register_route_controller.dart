@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../domain/models/register_route_request_model.dart';
 import '../domain/models/register_route_response_model.dart';
 import '../domain/models/rest_stop_model.dart';
@@ -12,6 +14,46 @@ class RegisterRouteController extends GetxController {
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  /// Helper method to show snackbar with better error handling
+  Future<void> _showSnackbar({
+    required String title,
+    required String message,
+    required Color backgroundColor,
+    required IconData icon,
+    Duration duration = const Duration(seconds: 3),
+  }) async {
+    try {
+      // Add a small delay to ensure UI is ready
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Try to show snackbar using Get
+      if (Get.context != null) {
+        Get.showSnackbar(GetSnackBar(
+          title: title,
+          message: message,
+          duration: duration,
+          backgroundColor: backgroundColor,
+          icon: Icon(icon, color: Colors.white),
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(8),
+          borderRadius: 8,
+          dismissDirection: DismissDirection.horizontal,
+          isDismissible: true,
+          shouldIconPulse: true,
+          barBlur: 10,
+          overlayBlur: 0.5,
+        ));
+      } else {
+        // Fallback: print to console if context is not available
+        print('====> Snackbar not shown (no context): $title - $message');
+      }
+    } catch (e) {
+      // Fallback: print to console if snackbar fails
+      print('====> Snackbar error: $e');
+      print('====> Snackbar message: $title - $message');
+    }
+  }
 
   RegisterRouteResponseModel? _registerRouteResponse;
   RegisterRouteResponseModel? get registerRouteResponse =>
@@ -53,6 +95,10 @@ class RegisterRouteController extends GetxController {
 
   final List<RestStopModel> _restStops = [];
   List<RestStopModel> get restStops => _restStops;
+
+  // Polyline encoding
+  String _encodedPolyline = '';
+  String get encodedPolyline => _encodedPolyline;
 
   void setRideType(String type) {
     _rideType = type;
@@ -341,6 +387,12 @@ class RegisterRouteController extends GetxController {
                                 .map((stop) =>
                                     '${stop['name']}: ${stop['lat']}, ${stop['lng']}')
                                 .toList()),
+                      _buildDataSection('🗺️ Route Polyline', [
+                        'Status: ${data['encodedPolyline'].isNotEmpty ? 'Generated' : 'Not generated'}',
+                        'Length: ${data['encodedPolyline'].length} characters',
+                        if (data['encodedPolyline'].isNotEmpty)
+                          'Preview: ${data['encodedPolyline'].length > 30 ? '${data['encodedPolyline'].substring(0, 30)}...' : data['encodedPolyline']}',
+                      ]),
                     ],
                   ),
                 ),
@@ -430,6 +482,14 @@ class RegisterRouteController extends GetxController {
       return;
     }
 
+    // Generate encoded polyline before sending request
+    await generateEncodedPolyline();
+
+    // Check if polyline was generated successfully
+    if (_encodedPolyline.isEmpty) {
+      print('====> Warning: Polyline is empty, proceeding anyway');
+    }
+
     _isLoading = true;
     update();
 
@@ -458,6 +518,7 @@ class RegisterRouteController extends GetxController {
         hasScreenEntertainment: _hasScreenEntertainment ? 1 : 0,
         allowLuggage: _allowLuggage ? 1 : 0,
         restStops: _restStops,
+        encodedPolyline: encodedPolyline,
       );
 
       // Call the API service
@@ -469,45 +530,46 @@ class RegisterRouteController extends GetxController {
 
       // Check if we got a response
       if (_registerRouteResponse == null) {
-        Get.showSnackbar(GetSnackBar(
+        await _showSnackbar(
           title: 'error'.tr,
           message: 'no_response_from_server'.tr,
-          duration: const Duration(seconds: 4),
           backgroundColor: Colors.red,
-          icon: const Icon(Icons.error, color: Colors.white),
-        ));
+          icon: Icons.error,
+          duration: const Duration(seconds: 4),
+        );
         return;
       }
 
       // Check if the request was successful
       if (_registerRouteResponse!.success) {
         // Success
-        Get.showSnackbar(GetSnackBar(
+        await _showSnackbar(
           title: 'success'.tr,
           message: _registerRouteResponse!.message,
-          duration: const Duration(seconds: 3),
           backgroundColor: Colors.green,
-          icon: const Icon(Icons.check_circle, color: Colors.white),
-        ));
+          icon: Icons.check_circle,
+        );
 
         // Clear the form
         // _clearForm();
 
         // Navigate back or to a success screen
-        Navigator.pop(Get.context!);
+        if (Get.context != null) {
+          Navigator.pop(Get.context!);
+        }
       } else {
         // Handle API error
         String errorMessage =
             _registerRouteResponse?.message ?? 'failed_to_register_route'.tr;
 
         // Show error message
-        Get.showSnackbar(GetSnackBar(
+        await _showSnackbar(
           title: 'error'.tr,
           message: errorMessage,
-          duration: const Duration(seconds: 4),
           backgroundColor: Colors.red,
-          icon: const Icon(Icons.error, color: Colors.white),
-        ));
+          icon: Icons.error,
+          duration: const Duration(seconds: 4),
+        );
 
         // Log the error for debugging
         print('====> Register Route Error: $errorMessage');
@@ -536,18 +598,18 @@ class RegisterRouteController extends GetxController {
         errorMessage = 'invalid_response_format'.tr;
       }
 
-      Get.showSnackbar(GetSnackBar(
+      await _showSnackbar(
         title: 'error'.tr,
         message: errorMessage,
-        duration: const Duration(seconds: 4),
         backgroundColor: Colors.red,
-        icon: const Icon(Icons.wifi_off, color: Colors.white),
-      ));
+        icon: Icons.wifi_off,
+        duration: const Duration(seconds: 4),
+      );
     }
   }
 
   // Method to show current form data for debugging
-  void debugFormData() {
+  Future<void> debugFormData() async {
     final data = getCurrentFormData();
     print("=== REGISTER ROUTE DATA ===");
     print("Start Coordinates: ${data['startCoordinates']}");
@@ -563,13 +625,13 @@ class RegisterRouteController extends GetxController {
     print("Rest Stops: ${data['restStops']}");
     print("=========================");
 
-    Get.showSnackbar(GetSnackBar(
+    await _showSnackbar(
       title: 'Debug Data'.tr,
       message: 'Check console for form data',
-      duration: const Duration(seconds: 2),
       backgroundColor: Colors.blue,
-      icon: const Icon(Icons.bug_report, color: Colors.white),
-    ));
+      icon: Icons.bug_report,
+      duration: const Duration(seconds: 2),
+    );
   }
 
   // Method to get current form data for debugging
@@ -607,7 +669,178 @@ class RegisterRouteController extends GetxController {
                 'lng': stop.lng,
               })
           .toList(),
+      'encodedPolyline': _encodedPolyline,
     };
+  }
+
+  // Method to generate encoded polyline from coordinates
+  Future<void> generateEncodedPolyline() async {
+    try {
+      // Validate that we have start and end coordinates
+      if (startLatController.text.isEmpty ||
+          startLngController.text.isEmpty ||
+          endLatController.text.isEmpty ||
+          endLngController.text.isEmpty) {
+        print('====> Cannot generate polyline: Missing coordinates');
+        _encodedPolyline = '';
+        return;
+      }
+
+      // Parse coordinates
+      double startLat = double.parse(startLatController.text);
+      double startLng = double.parse(startLngController.text);
+      double endLat = double.parse(endLatController.text);
+      double endLng = double.parse(endLngController.text);
+
+      // Validate coordinates are reasonable
+      if (startLat < -90 ||
+          startLat > 90 ||
+          endLat < -90 ||
+          endLat > 90 ||
+          startLng < -180 ||
+          startLng > 180 ||
+          endLng < -180 ||
+          endLng > 180) {
+        print('====> Invalid coordinates detected');
+        _encodedPolyline = '';
+        return;
+      }
+
+      // Try to get detailed route from Google Maps API first
+      String? detailedPolyline = await _getDetailedRouteFromGoogleMaps(
+          startLat, startLng, endLat, endLng);
+
+      if (detailedPolyline != null && detailedPolyline.isNotEmpty) {
+        // Use Google Maps detailed route
+        _encodedPolyline = detailedPolyline;
+        print('====> Using Google Maps detailed polyline');
+      } else {
+        // Fallback to simple polyline with rest stops
+        List<Map<String, double>> coordinates = [
+          {'lat': startLat, 'lng': startLng}, // Start point
+        ];
+
+        // Add rest stops if any
+        for (final restStop in _restStops) {
+          coordinates.add({
+            'lat': restStop.lat,
+            'lng': restStop.lng,
+          });
+        }
+
+        // Add end point
+        coordinates.add({'lat': endLat, 'lng': endLng});
+
+        // Generate simple encoded polyline
+        _encodedPolyline = _encodePolyline(coordinates);
+        print('====> Using simple polyline with rest stops');
+      }
+
+      print('====> Generated encoded polyline: $_encodedPolyline');
+      print('====> Polyline length: ${_encodedPolyline.length} characters');
+
+      // Update UI to reflect the new polyline
+      update();
+    } catch (e) {
+      print('====> Error generating encoded polyline: $e');
+      _encodedPolyline = '';
+      update();
+    }
+  }
+
+  // Get detailed route from Google Maps API
+  Future<String?> _getDetailedRouteFromGoogleMaps(
+      double startLat, double startLng, double endLat, double endLng) async {
+    try {
+      // Google Maps API key (you should use your own key)
+      const String apiKey = 'AIzaSyBEBg6ItImxrxhsGbv7G9KNyvy1gr2MGwo';
+
+      // Build waypoints string for rest stops
+      String waypoints = '';
+      if (_restStops.isNotEmpty) {
+        waypoints =
+            _restStops.map((stop) => '${stop.lat},${stop.lng}').join('|');
+      }
+
+      // Build URL
+      String url = 'https://maps.googleapis.com/maps/api/directions/json?'
+          'origin=$startLat,$startLng&'
+          'destination=$endLat,$endLng&'
+          '${waypoints.isNotEmpty ? 'waypoints=$waypoints&' : ''}'
+          'key=$apiKey&'
+          'mode=driving';
+
+      print('====> Google Maps API URL: $url');
+
+      // Make HTTP request
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['status'] == 'OK' && data['routes'].isNotEmpty) {
+          final route = data['routes'][0];
+          final polylineString = route['overview_polyline']['points'];
+
+          print('====> Google Maps polyline received: $polylineString');
+          return polylineString;
+        } else {
+          print('====> Google Maps API error: ${data['status']}');
+          return null;
+        }
+      } else {
+        print('====> Google Maps API HTTP error: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('====> Error calling Google Maps API: $e');
+      return null;
+    }
+  }
+
+  // Polyline encoding algorithm (Google's polyline algorithm)
+  String _encodePolyline(List<Map<String, double>> coordinates) {
+    if (coordinates.isEmpty) return '';
+
+    String encoded = '';
+    int prevLat = 0;
+    int prevLng = 0;
+
+    for (final coord in coordinates) {
+      int lat = (coord['lat']! * 1e5).round();
+      int lng = (coord['lng']! * 1e5).round();
+
+      int dLat = lat - prevLat;
+      int dLng = lng - prevLng;
+
+      encoded += _encodeSignedNumber(dLat);
+      encoded += _encodeSignedNumber(dLng);
+
+      prevLat = lat;
+      prevLng = lng;
+    }
+
+    return encoded;
+  }
+
+  // Encode a signed number for polyline
+  String _encodeSignedNumber(int num) {
+    int sgnNum = num << 1;
+    if (num < 0) {
+      sgnNum = ~sgnNum;
+    }
+    return _encodeNumber(sgnNum);
+  }
+
+  // Encode a number for polyline
+  String _encodeNumber(int num) {
+    String encoded = '';
+    while (num >= 0x20) {
+      encoded += String.fromCharCode(((num & 0x1F) | 0x20) + 63);
+      num >>= 5;
+    }
+    encoded += String.fromCharCode(num + 63);
+    return encoded;
   }
 
   @override

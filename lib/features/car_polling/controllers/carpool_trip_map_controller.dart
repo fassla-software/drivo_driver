@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
+import 'dart:async' show TimeoutException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -59,6 +60,40 @@ class CarpoolTripMapController extends GetxController {
   // Passenger pickup tracking
   final RxMap<String, bool> _passengerPickupStatus = <String, bool>{}.obs;
   final RxMap<String, bool> _isPickupInProgress = <String, bool>{}.obs;
+
+  // Professional tracking system
+  final RxBool _isRouteDeviated = false.obs;
+  final RxDouble _routeDeviationDistance = 0.0.obs;
+  final RxDouble _totalDistanceTraveled = 0.0.obs;
+  final Rx<Duration> _tripDuration = Duration.zero.obs;
+  final RxList<LatLng> _tripPath = <LatLng>[].obs;
+  final RxDouble _averageSpeed = 0.0.obs;
+  final RxBool _isInPickupZone = false.obs;
+  final RxBool _isInDropoffZone = false.obs;
+  final RxString _currentZone = ''.obs;
+
+  // Trip statistics
+  DateTime? _tripStartTime;
+  LatLng? _lastPosition;
+  List<LatLng> _routePoints = [];
+  double _totalRouteDistance = 0.0;
+
+  // Smart alerts
+  final RxList<String> _activeAlerts = <String>[].obs;
+  final RxBool _isAlertActive = false.obs;
+
+  // Getters for professional tracking
+  bool get isRouteDeviated => _isRouteDeviated.value;
+  double get routeDeviationDistance => _routeDeviationDistance.value;
+  double get totalDistanceTraveled => _totalDistanceTraveled.value;
+  Duration get tripDuration => _tripDuration.value;
+  List<LatLng> get tripPath => _tripPath;
+  double get averageSpeed => _averageSpeed.value;
+  bool get isInPickupZone => _isInPickupZone.value;
+  bool get isInDropoffZone => _isInDropoffZone.value;
+  String get currentZone => _currentZone.value;
+  List<String> get activeAlerts => _activeAlerts;
+  bool get isAlertActive => _isAlertActive.value;
 
   // Initialize with trip data
   void initializeTrip(CurrentTrip trip) {
@@ -514,22 +549,62 @@ class CarpoolTripMapController extends GetxController {
     }
   }
 
-  // Update driver location and marker
+  // Professional driver location update with advanced tracking
   void _updateDriverLocation(Position position) async {
     try {
       final newPosition = LatLng(position.latitude, position.longitude);
+      final currentTime = DateTime.now();
 
-      // تحديث موقع السائق
+      // Initialize trip start time if not set
+      if (_tripStartTime == null) {
+        _tripStartTime = currentTime;
+        _routePoints = _extractRoutePoints();
+        _totalRouteDistance = _calculateRouteDistance();
+      }
+
+      // Update driver position
       _driverPosition.value = newPosition;
       _driverBearing.value = position.heading;
 
-      debugPrint(
-          'تم تحديث موقع السائق: ${position.latitude}, ${position.longitude}, الاتجاه: ${position.heading}');
+      // Calculate distance traveled
+      if (_lastPosition != null) {
+        double segmentDistance = Geolocator.distanceBetween(
+          _lastPosition!.latitude,
+          _lastPosition!.longitude,
+          newPosition.latitude,
+          newPosition.longitude,
+        );
+        _totalDistanceTraveled.value += segmentDistance;
 
-      // تحديث علامة السيارة على الخريطة
+        // Add to trip path
+        _tripPath.add(newPosition);
+      }
+      _lastPosition = newPosition;
+
+      // Update trip duration
+      if (_tripStartTime != null) {
+        _tripDuration.value = currentTime.difference(_tripStartTime!);
+      }
+
+      // Calculate average speed (km/h)
+      if (_tripDuration.value.inSeconds > 0) {
+        _averageSpeed.value = (_totalDistanceTraveled.value / 1000) /
+            (_tripDuration.value.inSeconds / 3600);
+      }
+
+      // Professional route analysis
+      _analyzeRouteDeviation(newPosition);
+
+      // Zone detection
+      _detectZones(newPosition);
+
+      // Smart alerts
+      _checkSmartAlerts(newPosition);
+
+      // Update driver marker
       await _updateDriverMarker(newPosition, position.heading);
 
-      // تحديث الموقع في LocationController مع zone_id
+      // Update LocationController
       try {
         if (Get.isRegistered<LocationController>()) {
           await Get.find<LocationController>().updateLastLocation(
@@ -538,10 +613,10 @@ class CarpoolTripMapController extends GetxController {
           );
         }
       } catch (e) {
-        debugPrint('خطأ في تحديث الموقع: $e');
+        debugPrint('Error updating location: $e');
       }
 
-      // تحريك الكاميرا لتتبع السائق إذا كان وضع التتبع مفعل
+      // Camera tracking
       if (_mapController != null && _isTrackingLocation) {
         try {
           _mapController!.animateCamera(
@@ -555,18 +630,209 @@ class CarpoolTripMapController extends GetxController {
             ),
           );
         } catch (e) {
-          debugPrint('خطأ في تحريك الكاميرا: $e');
+          debugPrint('Camera animation error: $e');
         }
       }
 
-      // تحديث مسارات الركاب المستلمين
+      // Update passenger routes
       _updatePassengerRoutesForNewLocation();
 
-      // تحديث الواجهة
+      // Update UI
       update();
+
+      debugPrint('Professional location update completed');
     } catch (e) {
-      debugPrint('خطأ في تحديث موقع السائق: $e');
+      debugPrint('Error in professional location update: $e');
     }
+  }
+
+  // Extract route points from polylines
+  List<LatLng> _extractRoutePoints() {
+    List<LatLng> points = [];
+    for (final polyline in _polylines) {
+      points.addAll(polyline.points);
+    }
+    return points;
+  }
+
+  // Calculate total route distance
+  double _calculateRouteDistance() {
+    if (_routePoints.length < 2) return 0.0;
+
+    double totalDistance = 0.0;
+    for (int i = 0; i < _routePoints.length - 1; i++) {
+      totalDistance += Geolocator.distanceBetween(
+        _routePoints[i].latitude,
+        _routePoints[i].longitude,
+        _routePoints[i + 1].latitude,
+        _routePoints[i + 1].longitude,
+      );
+    }
+    return totalDistance;
+  }
+
+  // Analyze route deviation
+  void _analyzeRouteDeviation(LatLng currentPosition) {
+    if (_routePoints.isEmpty) return;
+
+    // Find nearest point on route
+    double minDistance = double.infinity;
+    LatLng nearestPoint = _routePoints.first;
+
+    for (final routePoint in _routePoints) {
+      double distance = Geolocator.distanceBetween(
+        currentPosition.latitude,
+        currentPosition.longitude,
+        routePoint.latitude,
+        routePoint.longitude,
+      );
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestPoint = routePoint;
+      }
+    }
+
+    // Check if deviation is significant (> 100 meters)
+    _routeDeviationDistance.value = minDistance;
+    _isRouteDeviated.value = minDistance > 100;
+
+    if (_isRouteDeviated.value) {
+      _addAlert(
+          'Route deviation detected: ${minDistance.toStringAsFixed(0)}m from planned route');
+    }
+  }
+
+  // Detect pickup and dropoff zones
+  void _detectZones(LatLng currentPosition) {
+    // Check pickup zones
+    if (_currentTrip.acceptedPassengers != null) {
+      for (final passenger in _currentTrip.acceptedPassengers!) {
+        if (passenger.pickupCoordinates?.lat != null &&
+            passenger.pickupCoordinates?.lng != null) {
+          double distance = Geolocator.distanceBetween(
+            currentPosition.latitude,
+            currentPosition.longitude,
+            passenger.pickupCoordinates!.lat!,
+            passenger.pickupCoordinates!.lng!,
+          );
+
+          if (distance <= 50) {
+            // 50m radius
+            _isInPickupZone.value = true;
+            _currentZone.value =
+                'Pickup Zone: ${passenger.name ?? 'Passenger'}';
+            _addAlert(
+                'Entered pickup zone for ${passenger.name ?? 'passenger'}');
+            return;
+          }
+        }
+      }
+    }
+
+    // Check dropoff zones
+    if (_currentTrip.acceptedPassengers != null) {
+      for (final passenger in _currentTrip.acceptedPassengers!) {
+        if (passenger.dropoffCoordinates?.lat != null &&
+            passenger.dropoffCoordinates?.lng != null) {
+          double distance = Geolocator.distanceBetween(
+            currentPosition.latitude,
+            currentPosition.longitude,
+            passenger.dropoffCoordinates!.lat!,
+            passenger.dropoffCoordinates!.lng!,
+          );
+
+          if (distance <= 50) {
+            // 50m radius
+            _isInDropoffZone.value = true;
+            _currentZone.value =
+                'Dropoff Zone: ${passenger.name ?? 'Passenger'}';
+            _addAlert(
+                'Entered dropoff zone for ${passenger.name ?? 'passenger'}');
+            return;
+          }
+        }
+      }
+    }
+
+    // Reset zones if not in any
+    _isInPickupZone.value = false;
+    _isInDropoffZone.value = false;
+    _currentZone.value = 'En Route';
+  }
+
+  // Smart alerts system
+  void _checkSmartAlerts(LatLng currentPosition) {
+    // Speed alert
+    if (_averageSpeed.value > 80) {
+      // 80 km/h
+      _addAlert(
+          'High speed detected: ${_averageSpeed.value.toStringAsFixed(1)} km/h');
+    }
+
+    // Long stop alert
+    if (_tripPath.length >= 2) {
+      LatLng lastPosition = _tripPath[_tripPath.length - 2];
+      double distance = Geolocator.distanceBetween(
+        currentPosition.latitude,
+        currentPosition.longitude,
+        lastPosition.latitude,
+        lastPosition.longitude,
+      );
+
+      if (distance < 10) {
+        // Less than 10m movement
+        _addAlert('Vehicle appears to be stopped');
+      }
+    }
+
+    // ETA alert
+    if (_totalRouteDistance > 0) {
+      double remainingDistance =
+          _totalRouteDistance - _totalDistanceTraveled.value;
+      double estimatedTime =
+          remainingDistance / (_averageSpeed.value * 1000 / 3600); // hours
+
+      if (estimatedTime > 2) {
+        // More than 2 hours remaining
+        _addAlert(
+            'Long journey ahead: ${estimatedTime.toStringAsFixed(1)} hours remaining');
+      }
+    }
+  }
+
+  // Add alert to active alerts list
+  void _addAlert(String message) {
+    if (!_activeAlerts.contains(message)) {
+      _activeAlerts.add(message);
+      _isAlertActive.value = true;
+
+      // Auto-remove alert after 30 seconds
+      Timer(const Duration(seconds: 30), () {
+        _activeAlerts.remove(message);
+        _isAlertActive.value = _activeAlerts.isNotEmpty;
+      });
+    }
+  }
+
+  // Clear all alerts
+  void clearAlerts() {
+    _activeAlerts.clear();
+    _isAlertActive.value = false;
+  }
+
+  // Get trip statistics
+  Map<String, dynamic> getTripStatistics() {
+    return {
+      'totalDistance': _totalDistanceTraveled.value,
+      'routeDistance': _totalRouteDistance,
+      'tripDuration': _tripDuration.value,
+      'averageSpeed': _averageSpeed.value,
+      'routeDeviation': _routeDeviationDistance.value,
+      'isDeviated': _isRouteDeviated.value,
+      'currentZone': _currentZone.value,
+      'activeAlerts': _activeAlerts.toList(),
+    };
   }
 
   // Add driver marker to map
@@ -1246,8 +1512,11 @@ class CarpoolTripMapController extends GetxController {
     }
   }
 
-  // Getters for trip data
-  // Proximity tracking methods
+  // Getters for proximity data
+  List<AcceptedPassenger> get nearbyPassengers => _nearbyPassengers;
+  bool get isProximityDialogShowing => _isProximityDialogShowing.value;
+
+  // Professional tracking methods
   void _startProximityChecking() {
     _proximityCheckTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       _checkForNearbyPassengers();
@@ -1438,10 +1707,6 @@ class CarpoolTripMapController extends GetxController {
   void showProximityDialog(AcceptedPassenger passenger) {
     _showProximityDialog(passenger);
   }
-
-  // Getters for proximity data
-  List<AcceptedPassenger> get nearbyPassengers => _nearbyPassengers;
-  bool get isProximityDialogShowing => _isProximityDialogShowing.value;
 
   @override
   void onClose() {

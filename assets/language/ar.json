@@ -484,7 +484,7 @@
   "tips": "الإكراميات",
   "withdraw": "سحب",
   "identity_type": "نوع الهوية",
-  "identity_image": "صورة الهوية",
+  "identity_image": "صورة البطاقه الشخصية",
   "payment": "دفع",
   "select_identity_type": "اختر نوع الهوية",
   "select_fuel_type": "اختر نوع الوقود",
@@ -895,6 +895,12 @@
   "starting_trip": "جاري بدء الرحلة...",
   "trip_started_successfully": "تم بدء الرحلة بنجاح!",
   "failed_to_start_trip": "فشل في بدء الرحلة",
+  "trip_ended_successfully": "تم إنهاء الرحلة بنجاح!",
+  "failed_to_end_trip": "فشل في إنهاء الرحلة",
+  "end_trip": "إنهاء الرحلة",
+  "are_you_sure_end_trip": "هل أنت متأكد من أنك تريد إنهاء هذه الرحلة؟",
+  "this_action_cannot_be_undone": "لا يمكن التراجع عن هذا الإجراء.",
+  "ending": "جاري الإنهاء...",
   "success": "نجح",
   "show_map": "عرض الخريطة",
   "main_route": "المسار الرئيسي",
@@ -930,5 +936,6 @@
   "fare": "الأجرة",
   "otp": "كلمة المرور المؤقتة",
   "unnamed_stop": "محطة بلا اسم",
-  "car_pool": "مشاركة السيارة"
+  "car_pool": "مشاركة السيارة",
+  "add_identity_image": "إضافة صورة الهوية اماميه وخلفيه"
 }

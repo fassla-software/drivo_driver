@@ -15,4 +15,9 @@ class CurrentTripsService implements CurrentTripsServiceInterface {
   Future startTrip(int carpoolRouteId) {
     return currentTripsRepositoryInterface.startTrip(carpoolRouteId);
   }
+
+  @override
+  Future endTrip(int carpoolRouteId) {
+    return currentTripsRepositoryInterface.endTrip(carpoolRouteId);
+  }
 }

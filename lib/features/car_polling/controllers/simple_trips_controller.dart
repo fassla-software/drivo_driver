@@ -22,6 +22,12 @@ class SimpleTripsController extends GetxController implements GetxService {
   String? _startingTripRouteId;
   String? get startingTripRouteId => _startingTripRouteId;
 
+  bool _isEndingTrip = false;
+  bool get isEndingTrip => _isEndingTrip;
+
+  String? _endingTripRouteId;
+  String? get endingTripRouteId => _endingTripRouteId;
+
   SimpleTripsResponseModel? _tripsResponse;
   SimpleTripsResponseModel? get tripsResponse => _tripsResponse;
 
@@ -218,6 +224,66 @@ class SimpleTripsController extends GetxController implements GetxService {
   /// Check if a specific trip is being started
   bool isTripBeingStarted(int tripId) {
     return _isStartingTrip && _startingTripRouteId == tripId.toString();
+  }
+
+  /// End a trip
+  Future<void> endTrip(int tripId) async {
+    _isEndingTrip = true;
+    _endingTripRouteId = tripId.toString();
+    update();
+
+    try {
+      print('=== Ending trip for ID: $tripId ===');
+
+      Response response = await currentTripsServiceInterface.endTrip(tripId);
+
+      print(
+          '=== End Trip API Response - Status Code: ${response.statusCode} ===');
+      print('=== End Trip API Response - Body: ${response.body} ===');
+
+      if (response.statusCode == 200) {
+        Get.showSnackbar(GetSnackBar(
+          title: 'success'.tr,
+          message: 'trip_ended_successfully'.tr,
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.green,
+        ));
+
+        // Refresh the trips list
+        await getCurrentTrips(isRefresh: true);
+      } else {
+        String errorMessage = 'failed_to_end_trip'.tr;
+        if (response.body != null && response.body['message'] != null) {
+          errorMessage = response.body['message'];
+        }
+
+        Get.showSnackbar(GetSnackBar(
+          title: 'error'.tr,
+          message: errorMessage,
+          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.red,
+        ));
+
+        ApiChecker.checkApi(response);
+      }
+    } catch (e) {
+      print('=== End Trip Error: $e ===');
+      Get.showSnackbar(GetSnackBar(
+        title: 'error'.tr,
+        message: 'failed_to_end_trip'.tr,
+        duration: const Duration(seconds: 3),
+        backgroundColor: Colors.red,
+      ));
+    } finally {
+      _isEndingTrip = false;
+      _endingTripRouteId = null;
+      update();
+    }
+  }
+
+  /// Check if a specific trip is being ended
+  bool isTripBeingEnded(int tripId) {
+    return _isEndingTrip && _endingTripRouteId == tripId.toString();
   }
 
   /// Clear all data

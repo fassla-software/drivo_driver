@@ -20,7 +20,7 @@ class OutOfZoneController extends GetxController implements GetxService {
   Timer? _timer;
   bool _isShowDialog = true;
 
-  void updateShowDialog(bool action){
+  void updateShowDialog(bool action) {
     _isShowDialog = action;
   }
 
@@ -38,66 +38,69 @@ class OutOfZoneController extends GetxController implements GetxService {
     }
   }
 
-  Future getDriverCurrentPosition() async{
+  Future getDriverCurrentPosition() async {
     location = await Geolocator.getCurrentPosition(
-      timeLimit: const Duration(seconds: 5), desiredAccuracy: LocationAccuracy.high,
+      timeLimit: const Duration(seconds: 5),
+      desiredAccuracy: LocationAccuracy.high,
     );
   }
 
   Future<void> findDriverCurrentZone() async {
     await getDriverCurrentPosition();
-    for(int i=0 ; i<polygones.length ; i++){
-      if(MapHelper.isPointInPolygon(LatLngPoint(location.latitude, location.longitude), polygones[i])){
+    for (int i = 0; i < polygones.length; i++) {
+      if (MapHelper.isPointInPolygon(
+          LatLngPoint(location.latitude, location.longitude), polygones[i])) {
         currentZone = polygones[i];
         isDriverOutOfZone = false;
         break;
-      }else{
+      } else {
         isDriverOutOfZone = true;
       }
     }
-    if(polygones.isNotEmpty){
+    if (polygones.isNotEmpty) {
       outOfZoneOnListener();
     }
   }
 
-
- void outOfZoneOnListener(){
-
+  void outOfZoneOnListener() {
     bool isBottomSheetOpen = false;
-    nearestZone = MapHelper.findNearestPolygon(LatLngPoint(location.latitude, location.longitude), polygones);
+    nearestZone = MapHelper.findNearestPolygon(
+        LatLngPoint(location.latitude, location.longitude), polygones);
 
-   _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) async{
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) async {
       await getDriverCurrentPosition();
-      if(!MapHelper.isPointInPolygon(LatLngPoint(location.latitude, location.longitude), currentZone)){
-        nearestZone = MapHelper.findNearestPolygon(LatLngPoint(location.latitude, location.longitude), polygones);
-        if(MapHelper.isPointInPolygon(LatLngPoint(location.latitude, location.longitude), nearestZone)){
+      if (!MapHelper.isPointInPolygon(
+          LatLngPoint(location.latitude, location.longitude), currentZone)) {
+        nearestZone = MapHelper.findNearestPolygon(
+            LatLngPoint(location.latitude, location.longitude), polygones);
+        if (MapHelper.isPointInPolygon(
+            LatLngPoint(location.latitude, location.longitude), nearestZone)) {
           currentZone = nearestZone;
           isDriverOutOfZone = false;
-          if(Get.isBottomSheetOpen!  && isBottomSheetOpen){
+          if (Get.isBottomSheetOpen! && isBottomSheetOpen) {
             isBottomSheetOpen = false;
-            if(Get.currentRoute != '/OutOfZoneMapView'){
+            if (Get.currentRoute != '/OutOfZoneMapView') {
               Get.back();
             }
             Get.back();
           }
-        }else{
+        } else {
           isDriverOutOfZone = true;
-          if(!Get.isBottomSheetOpen! && (Get.currentRoute != '/OutOfZoneMapView') && _isShowDialog){
-
-            isBottomSheetOpen= true;
+          if (!Get.isBottomSheetOpen! &&
+              (Get.currentRoute != '/OutOfZoneMapView') &&
+              _isShowDialog) {
+            isBottomSheetOpen = true;
             await Get.bottomSheet(const OutOfZoneBottomSheetWidget());
             isBottomSheetOpen = false;
           }
         }
-      }else{
-        if(Get.isBottomSheetOpen! && isBottomSheetOpen){
+      } else {
+        if (Get.isBottomSheetOpen! && isBottomSheetOpen) {
           isBottomSheetOpen = false;
-         Get.back();
+          Get.back();
         }
       }
     });
   }
-
-
 }

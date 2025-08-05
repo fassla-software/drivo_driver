@@ -4,4 +4,5 @@ import '../../../../interface/repository_interface.dart';
 abstract class CurrentTripsRepositoryInterface implements RepositoryInterface {
   Future<Response> getCurrentTripsWithPassengers();
   Future<Response> startTrip(int carpoolRouteId);
+  Future<Response> endTrip(int carpoolRouteId);
 }

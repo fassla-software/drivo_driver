@@ -660,22 +660,34 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
 
   double _calculateProgress(RegisterRouteController controller) {
     double progress = 0.0;
-    int totalFields = 10;
-    int filledFields = 0;
 
-    if (controller.startLatController.text.isNotEmpty) filledFields++;
-    if (controller.startLngController.text.isNotEmpty) filledFields++;
-    if (controller.endLatController.text.isNotEmpty) filledFields++;
-    if (controller.endLngController.text.isNotEmpty) filledFields++;
-    if (controller.startTimeController.text.isNotEmpty) filledFields++;
-    if (controller.priceController.text.isNotEmpty) filledFields++;
-    if (controller.vehicleIdController.text.isNotEmpty) filledFields++;
-    if (controller.seatsController.text.isNotEmpty) filledFields++;
-    if (controller.minAgeController.text.isNotEmpty) filledFields++;
-    if (controller.maxAgeController.text.isNotEmpty) filledFields++;
+    // Required fields (must be filled)
+    int requiredFields = 0;
+    int totalRequiredFields = 5;
 
-    progress = filledFields / totalFields;
-    return progress;
+    if (controller.startLatController.text.isNotEmpty) requiredFields++;
+    if (controller.startLngController.text.isNotEmpty) requiredFields++;
+    if (controller.endLatController.text.isNotEmpty) requiredFields++;
+    if (controller.endLngController.text.isNotEmpty) requiredFields++;
+    if (controller.startTimeController.text.isNotEmpty) requiredFields++;
+
+    // Optional fields (bonus points)
+    int optionalFields = 0;
+    int totalOptionalFields = 4;
+
+    if (controller.priceController.text.isNotEmpty) optionalFields++;
+    if (controller.seatsController.text.isNotEmpty) optionalFields++;
+    if (controller.minAgeController.text.isNotEmpty) optionalFields++;
+    if (controller.maxAgeController.text.isNotEmpty) optionalFields++;
+
+    // Calculate progress: 70% for required fields + 30% for optional fields
+    double requiredProgress = requiredFields / totalRequiredFields * 0.7;
+    double optionalProgress = optionalFields / totalOptionalFields * 0.3;
+
+    progress = requiredProgress + optionalProgress;
+
+    // Ensure progress doesn't exceed 100%
+    return progress.clamp(0.0, 1.0);
   }
 
   void _selectDateTime(RegisterRouteController controller) async {
@@ -830,7 +842,10 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
     );
   }
 
-  void _showRouteDataDialog(RegisterRouteController controller) {
+  void _showRouteDataDialog(RegisterRouteController controller) async {
+    // Generate polyline automatically before showing dialog
+    await controller.generateEncodedPolyline();
+
     Get.dialog(
       AlertDialog(
         title: Row(
@@ -876,8 +891,10 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
             child: Text('cancel'.tr),
           ),
           ElevatedButton(
-            onPressed: () {
-              Get.back();
+            onPressed: () async {
+              Navigator.of(context).pop();
+              // Add a small delay to ensure dialog is closed before showing snackbar
+              await Future.delayed(const Duration(milliseconds: 300));
               // Call the actual registration method
               controller.registerRoute();
             },

@@ -29,6 +29,7 @@ class SimpleTripModel {
   int? isTripStarted;
   String? vehicleName;
   int? passengersCount;
+  String? encodedPolyline;
   List<PassengerCoordinateModel>? passengerCoordinates;
   List<SimplePassengerModel>? passengers;
 
@@ -60,6 +61,7 @@ class SimpleTripModel {
     this.isTripStarted,
     this.vehicleName,
     this.passengersCount,
+    this.encodedPolyline,
     this.passengerCoordinates,
     this.passengers,
   });
@@ -97,6 +99,7 @@ class SimpleTripModel {
       isTripStarted: json['is_trip_started'],
       vehicleName: json['vehicle_name'],
       passengersCount: json['passengers_count'],
+      encodedPolyline: json['encoded_polyline'],
       // Debug passenger coordinates
       passengerCoordinates: (() {
         print(
@@ -147,6 +150,7 @@ class SimpleTripModel {
       'is_trip_started': isTripStarted,
       'vehicle_name': vehicleName,
       'passengers_count': passengersCount,
+      'encoded_polyline': encodedPolyline,
       'passenger_coordinates':
           passengerCoordinates?.map((item) => item.toJson()).toList(),
       'passengers': passengers?.map((item) => item.toJson()).toList(),

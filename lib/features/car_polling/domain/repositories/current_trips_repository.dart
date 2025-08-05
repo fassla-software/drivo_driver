@@ -39,6 +39,24 @@ class CurrentTripsRepository implements CurrentTripsRepositoryInterface {
   }
 
   @override
+  Future<Response> endTrip(int carpoolRouteId) async {
+    print('=== Repository: endTrip called with routeId: $carpoolRouteId ===');
+    print('=== Repository: API URL: ${AppConstants.endTripUri} ===');
+
+    final Map<String, dynamic> body = {
+      'carpool_route_id': carpoolRouteId,
+    };
+
+    print('=== Repository: End trip request body: $body ===');
+
+    final response = await apiClient.postData(AppConstants.endTripUri, body);
+
+    print(
+        '=== Repository: End trip response received with status: ${response.statusCode} ===');
+    return response;
+  }
+
+  @override
   Future add(value) {
     throw UnimplementedError();
   }
