@@ -465,35 +465,91 @@ class _SimpleTripMapScreenState extends State<SimpleTripMapScreen>
                                       .withOpacity(0.1),
                                 ),
                               ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                              child: Column(
                                 children: [
-                                  Icon(
-                                    Icons.route,
-                                    color: Theme.of(context).primaryColor,
-                                    size: 16,
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.route,
+                                        color: Theme.of(context).primaryColor,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '${ctrl.mainRoutePoints.length} ${'route_points'.tr}',
+                                        style: textMedium.copyWith(
+                                          color: Theme.of(context).primaryColor,
+                                          fontSize: Dimensions.fontSizeSmall,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        widget.trip.encodedPolyline != null &&
+                                                widget.trip.encodedPolyline!
+                                                    .isNotEmpty
+                                            ? Icons.check_circle
+                                            : Icons.error_outline,
+                                        color: widget.trip.encodedPolyline !=
+                                                    null &&
+                                                widget.trip.encodedPolyline!
+                                                    .isNotEmpty
+                                            ? Colors.green
+                                            : Colors.red,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        widget.trip.encodedPolyline != null &&
+                                                widget.trip.encodedPolyline!
+                                                    .isNotEmpty
+                                            ? 'server'.tr
+                                            : 'none'.tr,
+                                        style: textMedium.copyWith(
+                                          color: widget.trip.encodedPolyline !=
+                                                      null &&
+                                                  widget.trip.encodedPolyline!
+                                                      .isNotEmpty
+                                              ? Colors.green
+                                              : Colors.red,
+                                          fontSize: Dimensions.fontSizeSmall,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Icon(
+                                        Icons.people,
+                                        color: Theme.of(context).primaryColor,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '${widget.trip.passengers?.length ?? 0} ${'passengers'.tr}',
+                                        style: textMedium.copyWith(
+                                          color: Theme.of(context).primaryColor,
+                                          fontSize: Dimensions.fontSizeSmall,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${ctrl.mainRoutePoints.length} ${'route_points'.tr}',
-                                    style: textMedium.copyWith(
-                                      color: Theme.of(context).primaryColor,
-                                      fontSize: Dimensions.fontSizeSmall,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Icon(
-                                    Icons.people,
-                                    color: Theme.of(context).primaryColor,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${widget.trip.passengers?.length ?? 0} ${'passengers'.tr}',
-                                    style: textMedium.copyWith(
-                                      color: Theme.of(context).primaryColor,
-                                      fontSize: Dimensions.fontSizeSmall,
-                                    ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline,
+                                        color: Theme.of(context).hintColor,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        ctrl.polylineSource,
+                                        style: textRegular.copyWith(
+                                          color: Theme.of(context).hintColor,
+                                          fontSize:
+                                              Dimensions.fontSizeExtraSmall,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

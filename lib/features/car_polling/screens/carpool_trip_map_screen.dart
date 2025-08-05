@@ -209,18 +209,7 @@ class _CarpoolTripMapScreenState extends State<CarpoolTripMapScreen> {
                 } catch (e) {
                   distance = 0;
                 }
-                if (distance < 1000000) {
-                  // أقل من 1000 كم
-                  polylines.add(
-                    Polyline(
-                      polylineId: const PolylineId('driver_to_start'),
-                      points: [driver, start],
-                      color: Colors.orange,
-                      width: 4,
-                      patterns: [PatternItem.dash(15), PatternItem.gap(8)],
-                    ),
-                  );
-                }
+                // Removed driver to start polyline as requested
               }
             }
           } catch (e) {
@@ -405,155 +394,21 @@ class _CarpoolTripMapScreenState extends State<CarpoolTripMapScreen> {
                         ),
                       ),
 
-                    // Driver location and zone indicator
+                    // Professional tracking dashboard
                     if (controller.driverPosition != null)
                       Positioned(
                         bottom: 16,
                         left: 16,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Driver location indicator
-                            Container(
-                              padding: const EdgeInsets.all(
-                                  Dimensions.paddingSizeSmall),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).cardColor,
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    color: Colors.green,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'driver_location'.tr,
-                                    style: textRegular.copyWith(
-                                      fontSize: Dimensions.fontSizeSmall,
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            // Zone indicator
-                            Container(
-                              padding: const EdgeInsets.all(
-                                  Dimensions.paddingSizeSmall),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).cardColor,
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.map,
-                                    color: Colors.blue,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Zone: ${controller.getCurrentZoneId().isNotEmpty ? controller.getCurrentZoneId() : 'Unknown'}',
-                                    style: textRegular.copyWith(
-                                      fontSize: Dimensions.fontSizeSmall,
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            // Nearby passengers indicator
-                            if (controller.nearbyPassengers.isNotEmpty)
-                              AnimatedContainer(
-                                duration: Duration(milliseconds: 300),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    // Show dialog for the first nearby passenger
-                                    if (controller
-                                        .nearbyPassengers.isNotEmpty) {
-                                      controller.showProximityDialog(
-                                          controller.nearbyPassengers.first);
-                                    }
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(
-                                        Dimensions.paddingSizeSmall),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.orange.withValues(alpha: 0.95),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                          color: Colors.orange.shade600,
-                                          width: 1),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black
-                                              .withValues(alpha: 0.2),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 3),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.person_add,
-                                              color: Colors.white,
-                                              size: 16,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              '${controller.nearbyPassengers.length} مستخدم قريب',
-                                              style: textRegular.copyWith(
-                                                fontSize:
-                                                    Dimensions.fontSizeSmall,
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'اضغط للاستلام',
-                                          style: textRegular.copyWith(
-                                            fontSize: 10,
-                                            color: Colors.white
-                                                .withValues(alpha: 0.8),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              )
-                          ],
-                        ),
+                        child: _buildProfessionalTrackingDashboard(controller),
+                      ),
+
+                    // Smart alerts panel
+                    if (controller.isAlertActive)
+                      Positioned(
+                        top: 100,
+                        left: 16,
+                        right: 16,
+                        child: _buildSmartAlertsPanel(controller),
                       ),
                   ],
                 ),
@@ -1781,5 +1636,329 @@ class _CarpoolTripMapScreenState extends State<CarpoolTripMapScreen> {
         ],
       ),
     );
+  }
+
+  // Professional tracking dashboard
+  Widget _buildProfessionalTrackingDashboard(
+      CarpoolTripMapController controller) {
+    return Container(
+      width: 320,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.analytics, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Trip Analytics',
+                  style: textBold.copyWith(
+                    color: Colors.white,
+                    fontSize: Dimensions.fontSizeDefault,
+                  ),
+                ),
+                const Spacer(),
+                if (controller.isRouteDeviated)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'DEVIATED',
+                      style: textBold.copyWith(
+                        color: Colors.white,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Statistics
+          Padding(
+            padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+            child: Column(
+              children: [
+                // Distance and Speed
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'Distance',
+                        '${controller.totalDistanceTraveled.toStringAsFixed(1)} km',
+                        Icons.straighten,
+                        Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Speed',
+                        '${controller.averageSpeed.toStringAsFixed(1)} km/h',
+                        Icons.speed,
+                        Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Duration and Zone
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'Duration',
+                        _formatDuration(controller.tripDuration),
+                        Icons.timer,
+                        Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Zone',
+                        controller.currentZone,
+                        Icons.location_on,
+                        controller.isInPickupZone || controller.isInDropoffZone
+                            ? Colors.purple
+                            : Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Route deviation
+                if (controller.isRouteDeviated) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning, color: Colors.red, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Route deviation: ${controller.routeDeviationDistance.toStringAsFixed(0)}m',
+                            style: textMedium.copyWith(
+                              fontSize: Dimensions.fontSizeSmall,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Nearby passengers
+                if (controller.nearbyPassengers.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () {
+                      if (controller.nearbyPassengers.isNotEmpty) {
+                        controller.showProximityDialog(
+                            controller.nearbyPassengers.first);
+                      }
+                    },
+                    child: Container(
+                      padding:
+                          const EdgeInsets.all(Dimensions.paddingSizeSmall),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border:
+                            Border.all(color: Colors.orange.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_add,
+                              color: Colors.orange, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${controller.nearbyPassengers.length} nearby passenger(s)',
+                              style: textMedium.copyWith(
+                                fontSize: Dimensions.fontSizeSmall,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ),
+                          Icon(Icons.arrow_forward_ios,
+                              color: Colors.orange, size: 12),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Smart alerts panel
+  Widget _buildSmartAlertsPanel(CarpoolTripMapController controller) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.white, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  'Smart Alerts',
+                  style: textBold.copyWith(
+                    color: Colors.white,
+                    fontSize: Dimensions.fontSizeSmall,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => controller.clearAlerts(),
+                  icon: Icon(Icons.close, color: Colors.white, size: 16),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+
+          // Alerts list
+          Container(
+            padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
+            child: Column(
+              children: controller.activeAlerts
+                  .map(
+                    (alert) => Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding:
+                          const EdgeInsets.all(Dimensions.paddingSizeSmall),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: Colors.white, size: 14),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              alert,
+                              style: textRegular.copyWith(
+                                fontSize: Dimensions.fontSizeSmall,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper widget for stat cards
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: textMedium.copyWith(
+              fontSize: 10,
+              color: color,
+            ),
+          ),
+          Text(
+            value,
+            style: textBold.copyWith(
+              fontSize: 12,
+              color: color,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper function to format duration
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String hours = twoDigits(duration.inHours);
+    String minutes = twoDigits(duration.inMinutes.remainder(60));
+    return '$hours:$minutes';
   }
 }

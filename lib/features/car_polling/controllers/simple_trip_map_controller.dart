@@ -26,7 +26,6 @@ class SimpleTripMapController extends GetxController {
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
   List<LatLng> _mainRoutePoints = [];
-  List<LatLng> _driverToStartRoute = [];
   List<LatLng> _passengerRoutePoints = [];
   bool _isFollowingDriver = false;
 
@@ -34,7 +33,6 @@ class SimpleTripMapController extends GetxController {
   Set<Marker> get markers => _markers;
   Set<Polyline> get polylines => _polylines;
   List<LatLng> get mainRoutePoints => _mainRoutePoints;
-  List<LatLng> get driverToStartRoute => _driverToStartRoute;
   List<LatLng> get passengerRoutePoints => _passengerRoutePoints;
   bool get isFollowingDriver => _isFollowingDriver;
 
@@ -52,39 +50,17 @@ class SimpleTripMapController extends GetxController {
     return '5.2 km';
   }
 
+  String get polylineSource {
+    if (trip.encodedPolyline != null && trip.encodedPolyline!.isNotEmpty) {
+      return 'Server Polyline (${trip.encodedPolyline!.length} chars)';
+    }
+    return 'No polyline available';
+  }
+
   String get estimatedTimeToDestination {
     if (_mainRoutePoints.isEmpty) return 'Calculating...';
     // Calculate ETA logic here
     return '15 min';
-  }
-
-  // أضف متغير لمفتاح Google Maps Directions API
-  static const String googleMapsApiKey =
-      'AIzaSyBEBg6ItImxrxhsGbv7G9KNyvy1gr2MGwo'; // ضع مفتاحك هنا
-
-  /// جلب مسار القيادة الحقيقي من Google Directions API
-  Future<List<LatLng>> getRoutePolyline(List<LatLng> points) async {
-    if (points.length < 2) return points;
-    final origin = '${points.first.latitude},${points.first.longitude}';
-    final destination = '${points.last.latitude},${points.last.longitude}';
-    String waypoints = '';
-    if (points.length > 2) {
-      waypoints = points
-          .sublist(1, points.length - 1)
-          .map((p) => '${p.latitude},${p.longitude}')
-          .join('|');
-    }
-    final url =
-        'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination${waypoints.isNotEmpty ? '&waypoints=$waypoints' : ''}&key=$googleMapsApiKey&mode=driving';
-    print('=== Directions API URL: $url ===');
-    final response = await http.get(Uri.parse(url));
-    final data = json.decode(response.body);
-    if (data['routes'] != null && data['routes'].isNotEmpty) {
-      final polyline = data['routes'][0]['overview_polyline']['points'];
-      return decodePolyline(polyline);
-    }
-    print('=== Directions API error: ${data['status']} ===');
-    return points;
   }
 
   /// فك تشفير polyline
@@ -135,7 +111,6 @@ class SimpleTripMapController extends GetxController {
 
       // Load route data
       await _loadMainRoute();
-      await _loadDriverToStartRoute();
 
       _isLoading = false;
       update();
@@ -220,20 +195,20 @@ class SimpleTripMapController extends GetxController {
     }
 
     // Driver marker
-    if (_currentPosition != null) {
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('driver'),
-          position:
-              LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-          infoWindow: const InfoWindow(
-            title: 'Driver',
-            snippet: 'Your current location',
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        ),
-      );
-    }
+    // if (_currentPosition != null) {
+    //   _markers.add(
+    //     Marker(
+    //       markerId: const MarkerId('driver'),
+    //       position:
+    //           LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+    //       infoWindow: const InfoWindow(
+    //         title: 'Driver',
+    //         snippet: 'Your current location',
+    //       ),
+    //       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+    //     ),
+    //   );
+    // }
 
     // Passenger markers
     print('=== Creating passenger markers ===');
@@ -289,95 +264,23 @@ class SimpleTripMapController extends GetxController {
   Future<void> _loadMainRoute() async {
     try {
       print('=== Loading main route ===');
-      print('=== Start coordinates: ${trip.startCoordinates} ===');
-      print('=== End coordinates: ${trip.endCoordinates} ===');
-      print(
-          '=== Passenger coordinates: ${trip.passengerCoordinates?.length ?? 0} ===');
+      print('=== Encoded polyline: ${trip.encodedPolyline} ===');
 
-      if (trip.startCoordinates != null &&
-          trip.endCoordinates != null &&
-          trip.startCoordinates!.length >= 2 &&
-          trip.endCoordinates!.length >= 2) {
-        // Start with trip start point
-        List<LatLng> routePoints = [
-          LatLng(
-              trip.startCoordinates![1],
-              trip.startCoordinates![
-                  0]), // [longitude, latitude] -> (latitude, longitude)
-        ];
-
-        // Add passenger coordinates in order
-        if (trip.passengerCoordinates != null &&
-            trip.passengerCoordinates!.isNotEmpty) {
-          print('=== Processing passenger coordinates ===');
-          // Sort passenger coordinates by type (pickup first, then dropoff)
-          final sortedCoordinates =
-              List<PassengerCoordinateModel>.from(trip.passengerCoordinates!);
-          sortedCoordinates.sort((a, b) {
-            if (a.isPickup && b.isDropoff) return -1;
-            if (a.isDropoff && b.isPickup) return 1;
-            return 0;
-          });
-          print(
-              '=== Sorted coordinates count: ${sortedCoordinates.length} ===');
-          for (int i = 0; i < sortedCoordinates.length; i++) {
-            final passengerCoord = sortedCoordinates[i];
-            print(
-                '=== Processing coord $i: type=${passengerCoord.type}, coords=${passengerCoord.coordinates} ===');
-            if (passengerCoord.hasValidCoordinates) {
-              final latLng = LatLng(
-                passengerCoord.coordinates![1], // latitude
-                passengerCoord.coordinates![0], // longitude
-              );
-              print(
-                  '=== Adding route point: ${latLng.latitude}, ${latLng.longitude} ===');
-              routePoints.add(latLng);
-            }
-          }
-        }
-
-        // End with trip end point
-        routePoints.add(LatLng(
-            trip.endCoordinates![1],
-            trip.endCoordinates![
-                0])); // [longitude, latitude] -> (latitude, longitude)
-
-        // جلب المسار الحقيقي من Google Directions API
-        _mainRoutePoints = await getRoutePolyline(routePoints);
-
-        // Update polyline with route points
+      // Only use encoded polyline from the server
+      if (trip.encodedPolyline != null && trip.encodedPolyline!.isNotEmpty) {
+        print('=== Using encoded polyline from server ===');
+        print(
+            '=== Encoded polyline length: ${trip.encodedPolyline!.length} characters ===');
+        _mainRoutePoints = decodePolyline(trip.encodedPolyline!);
         _updateMainRoutePolyline();
-
-        print('=== Main route points: ${_mainRoutePoints.length} points ===');
-        for (int i = 0; i < _mainRoutePoints.length; i++) {
-          print(
-              '=== Point $i: ${_mainRoutePoints[i].latitude}, ${_mainRoutePoints[i].longitude} ===');
-        }
+        print('=== Decoded polyline points: ${_mainRoutePoints.length} ===');
+        print('=== Polyline source: Server (pre-generated) ===');
+      } else {
+        print('=== No encoded polyline available from server ===');
+        print('=== No polyline will be drawn ===');
       }
     } catch (e) {
       print('=== Error loading main route: $e ===');
-    }
-  }
-
-  Future<void> _loadDriverToStartRoute() async {
-    try {
-      if (_currentPosition != null &&
-          trip.startCoordinates != null &&
-          trip.startCoordinates!.length >= 2) {
-        // For now, create a simple route from driver to start
-        _driverToStartRoute = [
-          LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-          LatLng(
-              trip.startCoordinates![1],
-              trip.startCoordinates![
-                  0]), // [longitude, latitude] -> (latitude, longitude)
-        ];
-
-        // Update polylines
-        _updateDriverToStartPolyline();
-      }
-    } catch (e) {
-      print('=== Error loading driver to start route: $e ===');
     }
   }
 
@@ -405,24 +308,6 @@ class SimpleTripMapController extends GetxController {
     }
 
     print('=== Total polylines: ${_polylines.length} ===');
-    update();
-  }
-
-  void _updateDriverToStartPolyline() {
-    _polylines.removeWhere((polyline) =>
-        polyline.polylineId == const PolylineId('driver_to_start'));
-
-    if (_driverToStartRoute.isNotEmpty) {
-      _polylines.add(
-        Polyline(
-          polylineId: const PolylineId('driver_to_start'),
-          points: _driverToStartRoute,
-          color: Colors.orange,
-          width: 3,
-        ),
-      );
-    }
-
     update();
   }
 

@@ -15,7 +15,7 @@ class ProfileLevelWidgetWidget extends StatelessWidget {
     return GetBuilder<ProfileController>(builder: (profileController) {
       return Container(
         decoration: BoxDecoration(
-          color: Colors.black,
+          color: const Color.fromARGB(118, 56, 56, 56),
           borderRadius: BorderRadius.circular(Dimensions.paddingSizeDefault),
         ),
         child: Padding(

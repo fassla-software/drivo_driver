@@ -56,12 +56,137 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  late AnimationController _headerAnimationController;
+  late AnimationController _profileCardAnimationController;
+  late AnimationController _contentAnimationController;
+  late AnimationController _fabAnimationController;
+
+  late Animation<double> _headerSlideAnimation;
+  late Animation<double> _headerFadeAnimation;
+  late Animation<double> _profileCardSlideAnimation;
+  late Animation<double> _profileCardFadeAnimation;
+  late Animation<double> _contentSlideAnimation;
+  late Animation<double> _contentFadeAnimation;
+  late Animation<double> _fabScaleAnimation;
+  late Animation<double> _fabFadeAnimation;
+
   @override
   void initState() {
+    super.initState();
+
+    // تهيئة الرسوم المتحركة
+    _headerAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    _profileCardAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _contentAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _fabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    // رأس متحرك
+    _headerSlideAnimation = Tween<double>(
+      begin: -50.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _headerAnimationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _headerFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _headerAnimationController,
+      curve: Curves.easeInOut,
+    ));
+
+    // بطاقة الملف الشخصي متحركة
+    _profileCardSlideAnimation = Tween<double>(
+      begin: 30.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _profileCardAnimationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _profileCardFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _profileCardAnimationController,
+      curve: Curves.easeInOut,
+    ));
+
+    // محتوى متحرك
+    _contentSlideAnimation = Tween<double>(
+      begin: 100.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _contentAnimationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _contentFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _contentAnimationController,
+      curve: Curves.easeInOut,
+    ));
+
+    // زر متحرك
+    _fabScaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fabAnimationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _fabFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fabAnimationController,
+      curve: Curves.easeInOut,
+    ));
+
+    // بدء الرسوم المتحركة
+    _headerAnimationController.forward();
+    Future.delayed(const Duration(milliseconds: 200), () {
+      _profileCardAnimationController.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 400), () {
+      _contentAnimationController.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 600), () {
+      _fabAnimationController.forward();
+    });
+
     WidgetsFlutterBinding.ensureInitialized();
     loadData();
-    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _headerAnimationController.dispose();
+    _profileCardAnimationController.dispose();
+    _contentAnimationController.dispose();
+    _fabAnimationController.dispose();
+    super.dispose();
   }
 
   Future<void> loadData() async {
@@ -129,221 +254,560 @@ class _HomeScreenState extends State<HomeScreen> {
         Get.find<ProfileController>().getProfileInfo();
       },
       child: Scaffold(
-          body: Stack(children: [
-            CustomScrollView(slivers: [
-              SliverPersistentHeader(
-                  pinned: true,
-                  delegate: SliverDelegate(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                Theme.of(context).primaryColor.withValues(alpha: 0.05),
+                Colors.white,
+              ],
+            ),
+          ),
+          child: Stack(
+            children: [
+              CustomScrollView(
+                slivers: [
+                  // رأس متحرك
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: SliverDelegate(
                       height: GetPlatform.isIOS ? 150 : 120,
-                      child: Column(children: [
-                        AppBarWidget(
-                          title: 'dashboard'.tr,
-                          showBackButton: false,
-                          onTap: () {
-                            Get.find<ProfileController>().toggleDrawer();
+                      child: AnimatedBuilder(
+                        animation: _headerAnimationController,
+                        builder: (context, child) {
+                          return Transform.translate(
+                            offset: Offset(_headerSlideAnimation.value, 0),
+                            child: Opacity(
+                              opacity: _headerFadeAnimation.value,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Theme.of(context)
+                                          .primaryColor
+                                          .withValues(alpha: 0.9),
+                                      Theme.of(context)
+                                          .primaryColor
+                                          .withValues(alpha: 0.7),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    AppBarWidget(
+                                      title: 'dashboard'.tr,
+                                      showBackButton: false,
+                                      onTap: () {
+                                        Get.find<ProfileController>()
+                                            .toggleDrawer();
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
+                  // محتوى متحرك
+                  SliverToBoxAdapter(
+                    child: AnimatedBuilder(
+                      animation: _contentAnimationController,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0, _contentSlideAnimation.value),
+                          child: Opacity(
+                            opacity: _contentFadeAnimation.value,
+                            child: GetBuilder<ProfileController>(
+                              builder: (profileController) {
+                                return !profileController.isLoading
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const SizedBox(height: 80.0),
+
+                                          // بطاقة الحالة
+                                          if (profileController
+                                                      .profileInfo?.vehicle !=
+                                                  null &&
+                                              profileController.profileInfo
+                                                      ?.vehicleStatus !=
+                                                  0 &&
+                                              profileController.profileInfo
+                                                      ?.vehicleStatus !=
+                                                  1)
+                                            GetBuilder<RideController>(
+                                              builder: (rideController) {
+                                                return Container(
+                                                  margin: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: Dimensions
+                                                        .paddingSizeDefault,
+                                                    vertical: Dimensions
+                                                        .paddingSizeSmall,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Colors.black
+                                                            .withValues(
+                                                                alpha: 0.1),
+                                                        blurRadius: 15,
+                                                        offset:
+                                                            const Offset(0, 5),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child:
+                                                      const OngoingRideCardWidget(),
+                                                );
+                                              },
+                                            ),
+                                          // إضافة مركبة
+                                          if (profileController
+                                                      .profileInfo?.vehicle ==
+                                                  null &&
+                                              profileController.profileInfo
+                                                      ?.vehicleStatus ==
+                                                  0)
+                                            Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: Dimensions
+                                                    .paddingSizeDefault,
+                                                vertical:
+                                                    Dimensions.paddingSizeSmall,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(alpha: 0.1),
+                                                    blurRadius: 15,
+                                                    offset: const Offset(0, 5),
+                                                  ),
+                                                ],
+                                              ),
+                                              child:
+                                                  const AddYourVehicleWidget(),
+                                            ),
+
+                                          // تحذير خارج المنطقة
+                                          GetBuilder<OutOfZoneController>(
+                                            builder: (outOfZoneController) {
+                                              return outOfZoneController
+                                                      .isDriverOutOfZone
+                                                  ? Container(
+                                                      margin: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: Dimensions
+                                                            .paddingSizeDefault,
+                                                        vertical: Dimensions
+                                                            .paddingSizeSmall,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        gradient:
+                                                            LinearGradient(
+                                                          colors: [
+                                                            Colors.orange
+                                                                .withValues(
+                                                                    alpha: 0.1),
+                                                            Colors.red
+                                                                .withValues(
+                                                                    alpha:
+                                                                        0.05),
+                                                          ],
+                                                        ),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20),
+                                                        border: Border.all(
+                                                          color: Colors.orange
+                                                              .withValues(
+                                                                  alpha: 0.3),
+                                                          width: 1,
+                                                        ),
+                                                      ),
+                                                      child: InkWell(
+                                                        onTap: () => Get.to(() =>
+                                                            const OutOfZoneMapScreen()),
+                                                        child: Padding(
+                                                          padding: const EdgeInsets
+                                                              .all(Dimensions
+                                                                  .paddingSizeDefault),
+                                                          child: Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .spaceBetween,
+                                                            children: [
+                                                              Row(
+                                                                children: [
+                                                                  Container(
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .all(
+                                                                            8),
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      color: Colors
+                                                                          .orange
+                                                                          .withValues(
+                                                                              alpha: 0.2),
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                              12),
+                                                                    ),
+                                                                    child: Icon(
+                                                                      Icons
+                                                                          .warning,
+                                                                      size: 24,
+                                                                      color: Colors
+                                                                          .orange
+                                                                          .shade700,
+                                                                    ),
+                                                                  ),
+                                                                  const SizedBox(
+                                                                      width: Dimensions
+                                                                          .paddingSizeDefault),
+                                                                  Expanded(
+                                                                    child:
+                                                                        Column(
+                                                                      crossAxisAlignment:
+                                                                          CrossAxisAlignment
+                                                                              .start,
+                                                                      children: [
+                                                                        Text(
+                                                                          'you_are_out_of_zone'
+                                                                              .tr,
+                                                                          style:
+                                                                              textBold.copyWith(
+                                                                            fontSize:
+                                                                                Dimensions.fontSizeDefault,
+                                                                            color:
+                                                                                Colors.orange.shade700,
+                                                                          ),
+                                                                        ),
+                                                                        Text(
+                                                                          'to_get_request_must'
+                                                                              .tr,
+                                                                          style:
+                                                                              textRegular.copyWith(
+                                                                            fontSize:
+                                                                                12,
+                                                                            color:
+                                                                                Colors.orange.shade600,
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              Icon(
+                                                                Icons
+                                                                    .arrow_forward_ios,
+                                                                color: Colors
+                                                                    .orange
+                                                                    .shade600,
+                                                                size: 20,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                  : const SizedBox();
+                                            },
+                                          ),
+
+                                          // حالة المركبة المعلقة
+                                          if (profileController
+                                                      .profileInfo?.vehicle !=
+                                                  null &&
+                                              profileController.profileInfo
+                                                      ?.vehicleStatus ==
+                                                  1)
+                                            Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: Dimensions
+                                                    .paddingSizeDefault,
+                                                vertical:
+                                                    Dimensions.paddingSizeSmall,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(alpha: 0.1),
+                                                    blurRadius: 15,
+                                                    offset: const Offset(0, 5),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: VehiclePendingWidget(
+                                                icon: Images.reward1,
+                                                description:
+                                                    'create_account_approve_description_vehicle'
+                                                        .tr,
+                                                title:
+                                                    'registration_not_approve_yet_vehicle'
+                                                        .tr,
+                                              ),
+                                            ),
+
+                                          // قائمة الأنشطة
+                                          if (Get.find<ProfileController>()
+                                                  .profileInfo
+                                                  ?.vehicle !=
+                                              null)
+                                            Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: Dimensions
+                                                    .paddingSizeDefault,
+                                                vertical:
+                                                    Dimensions.paddingSizeSmall,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(alpha: 0.1),
+                                                    blurRadius: 15,
+                                                    offset: const Offset(0, 5),
+                                                  ),
+                                                ],
+                                              ),
+                                              child:
+                                                  const MyActivityListViewWidget(),
+                                            ),
+
+                                          const SizedBox(
+                                              height: Dimensions
+                                                  .paddingSizeDefault),
+
+                                          // قسم الإحالة
+                                          if (Get.find<SplashController>()
+                                                  .config
+                                                  ?.referralEarningStatus ??
+                                              false)
+                                            Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: Dimensions
+                                                    .paddingSizeDefault,
+                                                vertical:
+                                                    Dimensions.paddingSizeSmall,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(alpha: 0.1),
+                                                    blurRadius: 15,
+                                                    offset: const Offset(0, 5),
+                                                  ),
+                                                ],
+                                              ),
+                                              child:
+                                                  const HomeReferralViewWidget(),
+                                            ),
+
+                                          const SizedBox(height: 100),
+                                        ],
+                                      )
+                                    : const NotificationShimmerWidget();
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              // بطاقة الملف الشخصي المتحركة
+              Positioned(
+                top: GetPlatform.isIOS ? 120 : 90,
+                left: 0,
+                right: 0,
+                child: AnimatedBuilder(
+                  animation: _profileCardAnimationController,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _profileCardSlideAnimation.value),
+                      child: Opacity(
+                        opacity: _profileCardFadeAnimation.value,
+                        child: GetBuilder<ProfileController>(
+                          builder: (profileController) {
+                            return GestureDetector(
+                              onTap: () {
+                                Get.to(() => const ProfileScreen());
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: Dimensions.paddingSizeDefault,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.15),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: ProfileStatusCardWidget(
+                                  profileController: profileController,
+                                ),
+                              ),
+                            );
                           },
                         ),
-                      ]))),
-              SliverToBoxAdapter(child:
-                  GetBuilder<ProfileController>(builder: (profileController) {
-                return !profileController.isLoading
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                            const SizedBox(height: 60.0),
-                            if (profileController.profileInfo?.vehicle !=
-                                    null &&
-                                profileController.profileInfo?.vehicleStatus !=
-                                    0 &&
-                                profileController.profileInfo?.vehicleStatus !=
-                                    1)
-                              GetBuilder<RideController>(
-                                  builder: (rideController) {
-                                return const OngoingRideCardWidget();
-                              }),
-                            if (profileController.profileInfo?.vehicle ==
-                                    null &&
-                                profileController.profileInfo?.vehicleStatus ==
-                                    0)
-                              const AddYourVehicleWidget(),
-                            GetBuilder<OutOfZoneController>(
-                                builder: (outOfZoneController) {
-                              return outOfZoneController.isDriverOutOfZone
-                                  ? InkWell(
-                                      onTap: () => Get.to(
-                                          () => const OutOfZoneMapScreen()),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(
-                                            Dimensions.paddingSizeSmall),
-                                        margin: const EdgeInsets.symmetric(
-                                            vertical:
-                                                Dimensions.paddingSizeSmall,
-                                            horizontal:
-                                                Dimensions.paddingSizeDefault),
-                                        decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(
-                                                Dimensions.radiusDefault),
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .tertiaryContainer
-                                                .withOpacity(0.1)),
-                                        child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Row(children: [
-                                                Icon(Icons.warning,
-                                                    size: 24,
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .error),
-                                                const SizedBox(
-                                                    width: Dimensions
-                                                        .paddingSizeDefault),
-                                                Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                          'you_are_out_of_zone'
-                                                              .tr,
-                                                          style: textBold.copyWith(
-                                                              fontSize: Dimensions
-                                                                  .fontSizeSmall)),
-                                                      Text(
-                                                          'to_get_request_must'
-                                                              .tr,
-                                                          style: textRegular.copyWith(
-                                                              fontSize: 10,
-                                                              color: Theme.of(
-                                                                      context)
-                                                                  .primaryColor))
-                                                    ])
-                                              ]),
-                                              Image.asset(
-                                                  Images.homeOutOfZoneIcon,
-                                                  height: 30,
-                                                  width: 30)
-                                            ]),
-                                      ),
-                                    )
-                                  : const SizedBox();
-                            }),
-                            if (profileController.profileInfo?.vehicle !=
-                                    null &&
-                                profileController.profileInfo?.vehicleStatus ==
-                                    1)
-                              VehiclePendingWidget(
-                                icon: Images.reward1,
-                                description:
-                                    'create_account_approve_description_vehicle'
-                                        .tr,
-                                title:
-                                    'registration_not_approve_yet_vehicle'.tr,
-                              ),
-                            if (Get.find<ProfileController>()
-                                    .profileInfo
-                                    ?.vehicle !=
-                                null)
-                              const MyActivityListViewWidget(),
-                            const SizedBox(
-                                height: Dimensions.paddingSizeDefault),
-                            if (Get.find<SplashController>()
-                                    .config
-                                    ?.referralEarningStatus ??
-                                false)
-                              const HomeReferralViewWidget(),
-                            const SizedBox(height: 100),
-                          ])
-                    : const NotificationShimmerWidget();
-              }))
-            ]),
-            Positioned(
-              top: GetPlatform.isIOS ? 120 : 90,
-              left: 0,
-              right: 0,
-              child:
-                  GetBuilder<ProfileController>(builder: (profileController) {
-                return GestureDetector(
-                    onTap: () {
-                      Get.to(() => const ProfileScreen());
-                    },
-                    child: ProfileStatusCardWidget(
-                        profileController: profileController));
-              }),
-            ),
-          ]),
-          floatingActionButton:
-              GetBuilder<RideController>(builder: (rideController) {
-            int ridingCount = rideController.getOnGoingRideCount();
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
 
-            int parcelCount = rideController.parcelListModel?.totalSize ?? 0;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 80),
-              child: CustomMenuButtonWidget(
-                openForegroundColor: Colors.white,
-                closedBackgroundColor: Theme.of(context).primaryColor,
-                openBackgroundColor: Theme.of(context).primaryColorDark,
-                labelsBackgroundColor: Theme.of(context).cardColor,
-                speedDialChildren: <CustomMenuWidget>[
-                  CustomMenuWidget(
-                    child: const Icon(Icons.directions_run),
-                    foregroundColor: Colors.white,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    label: 'ongoing_ride'.tr,
-                    onPressed: () {
-                      if (rideController.ongoingTrip![0].currentStatus ==
-                              'ongoing' ||
-                          rideController.ongoingTrip![0].currentStatus ==
-                              'accepted' ||
-                          (rideController.ongoingTrip![0].currentStatus ==
-                                  'completed' &&
-                              rideController.ongoingTrip![0].paymentStatus ==
-                                  'unpaid') ||
-                          (rideController.ongoingTrip![0].paidFare != "0" &&
-                              rideController.ongoingTrip![0].paymentStatus ==
-                                  'unpaid')) {
-                        Get.find<RideController>()
-                            .getCurrentRideStatus(froDetails: true);
-                      } else {
-                        showCustomSnackBar('no_trip_available'.tr);
-                      }
-                    },
-                    closeSpeedDialOnPressed: false,
-                  ),
-                  // CustomMenuWidget(
-                  //   child: Text('${rideController.parcelListModel?.totalSize}'),
-                  //   foregroundColor: Colors.white,
-                  //   backgroundColor: Theme.of(context).primaryColor,
-                  //   label: 'parcel_delivery'.tr,
-                  //   onPressed: () {
-                  //     if (rideController.parcelListModel != null &&
-                  //         rideController.parcelListModel!.data != null &&
-                  //         rideController.parcelListModel!.data!.isNotEmpty) {
-                  //       Get.to(() => const OngoingParcelListScreen(
-                  //             title: 'ongoing_parcel_list',
-                  //           ));
-                  //     } else {
-                  //       showCustomSnackBar('no_parcel_available'.tr);
-                  //     }
-                  //   },
-                  //   closeSpeedDialOnPressed: false,
-                  // ),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-                  child: Badge(
-                      backgroundColor: Theme.of(context).primaryColorDark,
-                      label: Text('${ridingCount + parcelCount}'),
-                      child: Image.asset(
-                        Images.ongoing,
-                        color: Colors.white,
-                      )),
+        // زر عائم متحرك
+        floatingActionButton: AnimatedBuilder(
+          animation: _fabAnimationController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _fabScaleAnimation.value,
+              child: Opacity(
+                opacity: _fabFadeAnimation.value,
+                child: GetBuilder<RideController>(
+                  builder: (rideController) {
+                    int ridingCount = rideController.getOnGoingRideCount();
+                    int parcelCount =
+                        rideController.parcelListModel?.totalSize ?? 0;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 80),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(context).primaryColor,
+                              Theme.of(context)
+                                  .primaryColor
+                                  .withValues(alpha: 0.8),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(context)
+                                  .primaryColor
+                                  .withValues(alpha: 0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: CustomMenuButtonWidget(
+                          openForegroundColor: Colors.white,
+                          closedBackgroundColor: Colors.transparent,
+                          openBackgroundColor: Colors.transparent,
+                          labelsBackgroundColor: Theme.of(context).cardColor,
+                          speedDialChildren: <CustomMenuWidget>[
+                            CustomMenuWidget(
+                              child: const Icon(Icons.directions_run),
+                              foregroundColor: Colors.white,
+                              backgroundColor: Theme.of(context).primaryColor,
+                              label: 'ongoing_ride'.tr,
+                              onPressed: () {
+                                if (rideController
+                                            .ongoingTrip![0].currentStatus ==
+                                        'ongoing' ||
+                                    rideController
+                                            .ongoingTrip![0].currentStatus ==
+                                        'accepted' ||
+                                    (rideController.ongoingTrip![0]
+                                                .currentStatus ==
+                                            'completed' &&
+                                        rideController.ongoingTrip![0]
+                                                .paymentStatus ==
+                                            'unpaid') ||
+                                    (rideController.ongoingTrip![0].paidFare !=
+                                            "0" &&
+                                        rideController.ongoingTrip![0]
+                                                .paymentStatus ==
+                                            'unpaid')) {
+                                  Get.find<RideController>()
+                                      .getCurrentRideStatus(froDetails: true);
+                                } else {
+                                  showCustomSnackBar('no_trip_available'.tr);
+                                }
+                              },
+                              closeSpeedDialOnPressed: false,
+                            ),
+                          ],
+                          child: Padding(
+                            padding: const EdgeInsets.all(
+                                Dimensions.paddingSizeDefault),
+                            child: Badge(
+                              backgroundColor:
+                                  Theme.of(context).primaryColorDark,
+                              label: Text('${ridingCount + parcelCount}'),
+                              child: Image.asset(
+                                Images.ongoing,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             );
-          })),
+          },
+        ),
+      ),
     );
   }
 }

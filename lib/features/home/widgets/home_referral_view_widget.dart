@@ -13,53 +13,257 @@ import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
 import 'package:share_plus/share_plus.dart';
 
-class HomeReferralViewWidget extends StatelessWidget {
+class HomeReferralViewWidget extends StatefulWidget {
   const HomeReferralViewWidget({super.key});
 
   @override
+  State<HomeReferralViewWidget> createState() => _HomeReferralViewWidgetState();
+}
+
+class _HomeReferralViewWidgetState extends State<HomeReferralViewWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.9,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutBack,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _slideAnimation = Tween<double>(
+      begin: 30.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Theme.of(context).primaryColor.withOpacity(0.1),
-      padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeExtraSmall, horizontal: Dimensions.paddingSizeLarge),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('invite&getRewards'.tr,style: textSemiBold),
-            const SizedBox(height: Dimensions.paddingSizeSmall),
-
-            Text('share_code_with_your_friends'.tr,style: textRegular.copyWith(fontSize: Dimensions.fontSizeExtraSmall)),
-            const SizedBox(height: Dimensions.paddingSizeSmall),
-
-            GetBuilder<ReferAndEarnController>(builder: (referAndEarnController){
-              return referAndEarnController.isLoading ?
-              SpinKitCircle(color: Theme.of(context).primaryColor, size: 30.0) :
-                InkWell(
-                  onTap: (){
-                  referAndEarnController.getReferralDetails().then((value){
-                    Get.bottomSheet(const ReferralViewBottomSheetWidget(), backgroundColor: Theme.of(context).cardColor,isDismissible: false);
-                  });
-                  },
-                  child: Container(
-                    height: 25,width: 100,
-                    decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor,
-                        borderRadius: BorderRadius.circular(Dimensions.paddingSizeOverLarge)
-                    ),
-                    child: Center(child: Text('invite_friends'.tr,
-                      style: textRegular.copyWith(color: Colors.white, fontSize: Dimensions.fontSizeSmall),
-                    )),
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: Transform.translate(
+              offset: Offset(0, _slideAnimation.value),
+              child: Container(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: Dimensions.paddingSizeDefault,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).primaryColor.withValues(alpha: 0.05),
+                      Theme.of(context).primaryColor.withValues(alpha: 0.02),
+                    ],
                   ),
-                );
-            })
-          ]),
-        ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color:
+                        Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                    width: 1,
+                  ),
+                ),
+                padding: const EdgeInsets.all(Dimensions.paddingSizeLarge),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // أيقونة الإحالة
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Theme.of(context)
+                                      .primaryColor
+                                      .withValues(alpha: 0.1),
+                                  Theme.of(context)
+                                      .primaryColor
+                                      .withValues(alpha: 0.05),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.share,
+                              color: Theme.of(context).primaryColor,
+                              size: 24,
+                            ),
+                          ),
 
-        Image.asset(Images.homeReferralIcon,height: 110,width: 120,)
-      ]),
+                          const SizedBox(height: Dimensions.paddingSizeDefault),
+
+                          // العنوان
+                          Text(
+                            'invite&getRewards'.tr,
+                            style: textBold.copyWith(
+                              color: Theme.of(context).primaryColorDark,
+                              fontSize: Dimensions.fontSizeLarge,
+                            ),
+                          ),
+
+                          const SizedBox(height: Dimensions.paddingSizeSmall),
+
+                          // الوصف
+                          Text(
+                            'share_code_with_your_friends'.tr,
+                            style: textRegular.copyWith(
+                              fontSize: Dimensions.fontSizeDefault,
+                              color: Theme.of(context).hintColor,
+                            ),
+                          ),
+
+                          const SizedBox(height: Dimensions.paddingSizeDefault),
+
+                          // زر الإحالة
+                          GetBuilder<ReferAndEarnController>(
+                            builder: (referAndEarnController) {
+                              return referAndEarnController.isLoading
+                                  ? SpinKitCircle(
+                                      color: Theme.of(context).primaryColor,
+                                      size: 30.0,
+                                    )
+                                  : Container(
+                                      height: 45,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Theme.of(context).primaryColor,
+                                            Theme.of(context)
+                                                .primaryColor
+                                                .withValues(alpha: 0.8),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(15),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Theme.of(context)
+                                                .primaryColor
+                                                .withValues(alpha: 0.3),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 5),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          borderRadius:
+                                              BorderRadius.circular(15),
+                                          onTap: () {
+                                            referAndEarnController
+                                                .getReferralDetails()
+                                                .then((value) {
+                                              Get.bottomSheet(
+                                                const ReferralViewBottomSheetWidget(),
+                                                backgroundColor:
+                                                    Theme.of(context).cardColor,
+                                                isDismissible: false,
+                                              );
+                                            });
+                                          },
+                                          child: Center(
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.person_add,
+                                                  color: Colors.white,
+                                                  size: 20,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  'invite_friends'.tr,
+                                                  style: textBold.copyWith(
+                                                    color: Colors.white,
+                                                    fontSize: Dimensions
+                                                        .fontSizeDefault,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: Dimensions.paddingSizeDefault),
+
+                    // صورة الإحالة
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        Images.homeReferralIcon,
+                        height: 80,
+                        width: 80,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
-
 
 class ReferralViewBottomSheetWidget extends StatelessWidget {
   const ReferralViewBottomSheetWidget({super.key});
@@ -71,91 +275,109 @@ class ReferralViewBottomSheetWidget extends StatelessWidget {
       padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
       decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
-          borderRadius:const BorderRadius.only(
+          borderRadius: const BorderRadius.only(
             topRight: Radius.circular(Dimensions.paddingSizeLarge),
             topLeft: Radius.circular(Dimensions.paddingSizeLarge),
-          )
-      ),
+          )),
       child: Column(children: [
         InkWell(
-          onTap: ()=> Get.back(),
-          child: Align(alignment: Alignment.topRight,
+          onTap: () => Get.back(),
+          child: Align(
+            alignment: Alignment.topRight,
             child: Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).hintColor.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(50),
               ),
               padding: const EdgeInsets.all(Dimensions.paddingSizeExtraSmall),
-
-              child: Image.asset(Images.crossIcon,height: 10,width: 10),
+              child: Image.asset(Images.crossIcon, height: 10, width: 10),
             ),
           ),
         ),
         const SizedBox(height: Dimensions.paddingSizeSmall),
-
-        Image.asset(Images.homeReferralIcon,height: 120,width: 120),
+        Image.asset(Images.homeReferralIcon, height: 120, width: 120),
         const SizedBox(height: Dimensions.paddingSizeSmall),
-
-        Text('invite&getRewards'.tr,style: textSemiBold),
+        Text('invite&getRewards'.tr, style: textSemiBold),
         const SizedBox(height: Dimensions.paddingSizeSmall),
-
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSignUp),
-          child: RichText(text: TextSpan(
-              text: 'referral_bottom_sheet_note'.tr,
-              style: textRegular.copyWith(color: Theme.of(context).colorScheme.secondaryFixedDim,fontSize: Dimensions.fontSizeSmall),
-              children: [TextSpan(
-                text: '  ${PriceConverter.convertPrice(context, Get.find<ReferAndEarnController>().referralDetails?.data?.shareCodeEarning ?? 0)}',
-                style: textRobotoBold.copyWith(color: Theme.of(context).colorScheme.secondaryFixedDim,fontSize: Dimensions.fontSizeSmall),
-              )]
-          ),textAlign: TextAlign.center),
+          padding: const EdgeInsets.symmetric(
+              horizontal: Dimensions.paddingSizeSignUp),
+          child: RichText(
+              text: TextSpan(
+                  text: 'referral_bottom_sheet_note'.tr,
+                  style: textRegular.copyWith(
+                      color: Theme.of(context).colorScheme.secondaryFixedDim,
+                      fontSize: Dimensions.fontSizeSmall),
+                  children: [
+                    TextSpan(
+                      text:
+                          '  ${PriceConverter.convertPrice(context, Get.find<ReferAndEarnController>().referralDetails?.data?.shareCodeEarning ?? 0)}',
+                      style: textRobotoBold.copyWith(
+                          color:
+                              Theme.of(context).colorScheme.secondaryFixedDim,
+                          fontSize: Dimensions.fontSizeSmall),
+                    )
+                  ]),
+              textAlign: TextAlign.center),
         ),
         const SizedBox(height: Dimensions.paddingSizeLarge),
-
         Container(
           width: Get.width * 0.6,
           padding: const EdgeInsets.only(left: Dimensions.paddingSizeDefault),
           decoration: BoxDecoration(
               color: Theme.of(context).highlightColor.withOpacity(0.2),
               borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-              border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.25))
-          ),
-          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(Get.find<ReferAndEarnController>().referralDetails?.data?.referralCode ?? '',style: textBold),
-
+              border: Border.all(
+                  color: Theme.of(context).primaryColor.withOpacity(0.25))),
+          child:
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text(
+                Get.find<ReferAndEarnController>()
+                        .referralDetails
+                        ?.data
+                        ?.referralCode ??
+                    '',
+                style: textBold),
             InkWell(
-              onTap: (){
-                Clipboard.setData(ClipboardData(text: Get.find<ReferAndEarnController>().referralDetails?.data?.referralCode ?? '')).then((_){
-                  showCustomSnackBar('copied'.tr,isError: false);
+              onTap: () {
+                Clipboard.setData(ClipboardData(
+                        text: Get.find<ReferAndEarnController>()
+                                .referralDetails
+                                ?.data
+                                ?.referralCode ??
+                            ''))
+                    .then((_) {
+                  showCustomSnackBar('copied'.tr, isError: false);
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault, vertical: Dimensions.paddingSizeSmall),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: Dimensions.paddingSizeDefault,
+                    vertical: Dimensions.paddingSizeSmall),
                 decoration: BoxDecoration(
                   color: Theme.of(context).highlightColor.withOpacity(0.2),
-                  borderRadius: const BorderRadius.only(topRight: Radius.circular(Dimensions.radiusDefault), bottomRight: Radius.circular(Dimensions.radiusDefault)),
+                  borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(Dimensions.radiusDefault),
+                      bottomRight: Radius.circular(Dimensions.radiusDefault)),
                 ),
-                child: Icon(Icons.copy_rounded,color: Theme.of(context).primaryColor),
+                child: Icon(Icons.copy_rounded,
+                    color: Theme.of(context).primaryColor),
               ),
             )
           ]),
         ),
         const SizedBox(height: Dimensions.paddingSizeLarge),
-
         ButtonWidget(
-            onPressed: () async{
+            onPressed: () async {
               await Share.share(
                   'Greetings, \n ${Get.find<SplashController>().config?.businessName} is the best ride share & parcel delivery platform in the country.'
-                      ' If you are new to this don’t forget to use \n "${Get.find<ReferAndEarnController>().referralDetails?.data?.referralCode ?? ''}" \n as the referral code while sign up into ${Get.find<SplashController>().config?.businessName} & you will get rewarded.'
-                      '\n\n ${AppConstants.baseUrl}'
-              );
+                  ' If you are new to this don’t forget to use \n "${Get.find<ReferAndEarnController>().referralDetails?.data?.referralCode ?? ''}" \n as the referral code while sign up into ${Get.find<SplashController>().config?.businessName} & you will get rewarded.'
+                  '\n\n ${AppConstants.baseUrl}');
             },
             width: Get.width * 0.5,
-            buttonText: 'invite_friends'.tr
-        ),
+            buttonText: 'invite_friends'.tr),
         const SizedBox(height: Dimensions.paddingSizeLarge),
       ]),
     );
   }
 }
-

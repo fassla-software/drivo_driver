@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDnPQa_hpNZ5APrH9Albcm8lx3uHflHzx4',
-    appId: '1:643071460200:android:cde992cbe85c3f3bb9ccdd',
+    appId: '1:643071460200:android:ba767563f5f10567b9ccdd',
     messagingSenderId: '643071460200',
     projectId: 'drivo-41f2e',
     storageBucket: 'drivo-41f2e.firebasestorage.app',
