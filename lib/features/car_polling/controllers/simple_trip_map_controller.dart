@@ -26,6 +26,7 @@ class SimpleTripMapController extends GetxController {
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
   List<LatLng> _mainRoutePoints = [];
+  List<LatLng> _driverToStartRoute = [];
   List<LatLng> _passengerRoutePoints = [];
   bool _isFollowingDriver = false;
 
@@ -33,6 +34,7 @@ class SimpleTripMapController extends GetxController {
   Set<Marker> get markers => _markers;
   Set<Polyline> get polylines => _polylines;
   List<LatLng> get mainRoutePoints => _mainRoutePoints;
+  List<LatLng> get driverToStartRoute => _driverToStartRoute;
   List<LatLng> get passengerRoutePoints => _passengerRoutePoints;
   bool get isFollowingDriver => _isFollowingDriver;
 
@@ -50,17 +52,46 @@ class SimpleTripMapController extends GetxController {
     return '5.2 km';
   }
 
-  String get polylineSource {
-    if (trip.encodedPolyline != null && trip.encodedPolyline!.isNotEmpty) {
-      return 'Server Polyline (${trip.encodedPolyline!.length} chars)';
-    }
-    return 'No polyline available';
-  }
-
   String get estimatedTimeToDestination {
     if (_mainRoutePoints.isEmpty) return 'Calculating...';
     // Calculate ETA logic here
     return '15 min';
+  }
+
+  String get polylineSource {
+    if (trip.encodedPolyline != null && trip.encodedPolyline!.isNotEmpty) {
+      return 'Trip Polyline (${trip.encodedPolyline!.length} chars)';
+    }
+    return 'No polyline available';
+  }
+
+  // أضف متغير لمفتاح Google Maps Directions API
+  static const String googleMapsApiKey =
+      'AIzaSyBEBg6ItImxrxhsGbv7G9KNyvy1gr2MGwo'; // ضع مفتاحك هنا
+
+  /// جلب مسار القيادة الحقيقي من Google Directions API
+  Future<List<LatLng>> getRoutePolyline(List<LatLng> points) async {
+    if (points.length < 2) return points;
+    final origin = '${points.first.latitude},${points.first.longitude}';
+    final destination = '${points.last.latitude},${points.last.longitude}';
+    String waypoints = '';
+    if (points.length > 2) {
+      waypoints = points
+          .sublist(1, points.length - 1)
+          .map((p) => '${p.latitude},${p.longitude}')
+          .join('|');
+    }
+    final url =
+        'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination${waypoints.isNotEmpty ? '&waypoints=$waypoints' : ''}&key=$googleMapsApiKey&mode=driving';
+    print('=== Directions API URL: $url ===');
+    final response = await http.get(Uri.parse(url));
+    final data = json.decode(response.body);
+    if (data['routes'] != null && data['routes'].isNotEmpty) {
+      final polyline = data['routes'][0]['overview_polyline']['points'];
+      return decodePolyline(polyline);
+    }
+    print('=== Directions API error: ${data['status']} ===');
+    return points;
   }
 
   /// فك تشفير polyline
@@ -111,6 +142,7 @@ class SimpleTripMapController extends GetxController {
 
       // Load route data
       await _loadMainRoute();
+      await _loadDriverToStartRoute();
 
       _isLoading = false;
       update();
@@ -210,40 +242,52 @@ class SimpleTripMapController extends GetxController {
     //   );
     // }
 
-    // Passenger markers
-    print('=== Creating passenger markers ===');
+    // Passenger pickup markers only
+    print('=== Creating passenger pickup markers ===');
     print(
         '=== Passenger coordinates count: ${trip.passengerCoordinates?.length ?? 0} ===');
 
     if (trip.passengerCoordinates != null) {
       for (int i = 0; i < trip.passengerCoordinates!.length; i++) {
         final passengerCoord = trip.passengerCoordinates![i];
-        print(
-            '=== Passenger coord $i: type=${passengerCoord.type}, coords=${passengerCoord.coordinates} ===');
 
-        if (passengerCoord.hasValidCoordinates) {
+        // Only show pickup coordinates
+        if (passengerCoord.isPickup && passengerCoord.hasValidCoordinates) {
+          print(
+              '=== Passenger pickup coord $i: coords=${passengerCoord.coordinates} ===');
+
           final latLng = LatLng(
-            passengerCoord.coordinates![1], // latitude
             passengerCoord.coordinates![0], // longitude
+            passengerCoord.coordinates![1], // latitude
           );
 
           print(
-              '=== Adding passenger marker: ${latLng.latitude}, ${latLng.longitude} ===');
+              '=== Adding pickup marker: ${latLng.latitude}, ${latLng.longitude} ===');
+
+          // Find passenger data for this pickup
+          String passengerInfo = 'Unknown Passenger';
+          if (trip.passengers != null) {
+            for (final passenger in trip.passengers!) {
+              if (passenger.carpoolTripId == passengerCoord.passengerId) {
+                passengerInfo =
+                    '${passenger.name ?? 'Unknown'} (${passenger.seatsCount ?? 1} seats)';
+                break;
+              }
+            }
+          }
 
           _markers.add(
             Marker(
-              markerId: MarkerId(
-                  'passenger_${passengerCoord.passengerId}_${passengerCoord.type}'),
+              markerId:
+                  MarkerId('passenger_pickup_${passengerCoord.passengerId}'),
               position: latLng,
               infoWindow: InfoWindow(
-                title: passengerCoord.isPickup ? 'Pickup' : 'Dropoff',
-                snippet: passengerCoord.address ?? 'Passenger location',
+                title: 'Pickup - $passengerInfo',
+                snippet:
+                    '${passengerCoord.address ?? 'Passenger pickup location'}\nStatus: ${_getPassengerStatus(passengerCoord.passengerId ?? '')}',
               ),
               icon: BitmapDescriptor.defaultMarkerWithHue(
-                passengerCoord.isPickup
-                    ? BitmapDescriptor.hueYellow
-                    : BitmapDescriptor.hueOrange,
-              ),
+                  BitmapDescriptor.hueYellow),
             ),
           );
         }
@@ -266,7 +310,7 @@ class SimpleTripMapController extends GetxController {
       print('=== Loading main route ===');
       print('=== Encoded polyline: ${trip.encodedPolyline} ===');
 
-      // Only use encoded polyline from the server
+      // Use encoded polyline from the server (static route for carpool trips)
       if (trip.encodedPolyline != null && trip.encodedPolyline!.isNotEmpty) {
         print('=== Using encoded polyline from server ===');
         print(
@@ -274,13 +318,35 @@ class SimpleTripMapController extends GetxController {
         _mainRoutePoints = decodePolyline(trip.encodedPolyline!);
         _updateMainRoutePolyline();
         print('=== Decoded polyline points: ${_mainRoutePoints.length} ===');
-        print('=== Polyline source: Server (pre-generated) ===');
+        print('=== Polyline source: Server (static carpool route) ===');
       } else {
         print('=== No encoded polyline available from server ===');
         print('=== No polyline will be drawn ===');
       }
     } catch (e) {
       print('=== Error loading main route: $e ===');
+    }
+  }
+
+  Future<void> _loadDriverToStartRoute() async {
+    try {
+      if (_currentPosition != null &&
+          trip.startCoordinates != null &&
+          trip.startCoordinates!.length >= 2) {
+        // For now, create a simple route from driver to start
+        _driverToStartRoute = [
+          LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+          LatLng(
+              trip.startCoordinates![1],
+              trip.startCoordinates![
+                  0]), // [longitude, latitude] -> (latitude, longitude)
+        ];
+
+        // Update polylines
+        _updateDriverToStartPolyline();
+      }
+    } catch (e) {
+      print('=== Error loading driver to start route: $e ===');
     }
   }
 
@@ -309,6 +375,22 @@ class SimpleTripMapController extends GetxController {
 
     print('=== Total polylines: ${_polylines.length} ===');
     update();
+  }
+
+  void _updateDriverToStartPolyline() {
+    // Removed driver to start polyline as requested
+    update();
+  }
+
+  String _getPassengerStatus(String passengerId) {
+    if (trip.passengers != null) {
+      for (final passenger in trip.passengers!) {
+        if (passenger.carpoolTripId == passengerId) {
+          return passenger.status ?? 'Unknown';
+        }
+      }
+    }
+    return 'Unknown';
   }
 
   void _fitMarkersOnMap() {
