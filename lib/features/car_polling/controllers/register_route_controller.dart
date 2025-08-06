@@ -9,6 +9,8 @@ import '../domain/services/register_route_service_interface.dart';
 
 class RegisterRouteController extends GetxController {
   final RegisterRouteServiceInterface registerRouteServiceInterface;
+  Function(String message, Color backgroundColor,
+      {IconData icon, Duration duration})? onShowSnackBar;
 
   RegisterRouteController({required this.registerRouteServiceInterface});
 
@@ -27,23 +29,55 @@ class RegisterRouteController extends GetxController {
       // Add a small delay to ensure UI is ready
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Try to show snackbar using Get
-      if (Get.context != null) {
-        Get.showSnackbar(GetSnackBar(
-          title: title,
-          message: message,
-          duration: duration,
-          backgroundColor: backgroundColor,
-          icon: Icon(icon, color: Colors.white),
-          snackPosition: SnackPosition.BOTTOM,
-          margin: const EdgeInsets.all(8),
-          borderRadius: 8,
-          dismissDirection: DismissDirection.horizontal,
-          isDismissible: true,
-          shouldIconPulse: true,
-          barBlur: 10,
-          overlayBlur: 0.5,
-        ));
+      // Use callback if available, otherwise fallback to Get.context
+      if (onShowSnackBar != null) {
+        onShowSnackBar!(message, backgroundColor,
+            icon: icon, duration: duration);
+      } else if (Get.context != null) {
+        ScaffoldMessenger.of(Get.context!).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(icon, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (title.isNotEmpty)
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      Text(
+                        message,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            duration: duration,
+            backgroundColor: backgroundColor,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(Get.context!).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
       } else {
         // Fallback: print to console if context is not available
         print('====> Snackbar not shown (no context): $title - $message');
@@ -211,8 +245,8 @@ class RegisterRouteController extends GetxController {
 
     try {
       int seats = int.parse(seatsController.text);
-      if (seats <= 0 || seats > 8) {
-        _showValidationError('seats_must_be_between_1_and_8'.tr);
+      if (seats <= 0 || seats > 50) {
+        _showValidationError('seats_must_be_between_1_and_50'.tr);
         return false;
       }
     } catch (e) {
@@ -236,13 +270,13 @@ class RegisterRouteController extends GetxController {
             ? int.parse(maxAgeController.text)
             : null;
 
-        if (minAge != null && (minAge < 13 || minAge > 80)) {
-          _showValidationError('minimum_age_must_be_between_13_and_80'.tr);
+        if (minAge != null && (minAge < 13 || minAge > 100)) {
+          _showValidationError('minimum_age_must_be_between_13_and_100'.tr);
           return false;
         }
 
-        if (maxAge != null && (maxAge < 13 || maxAge > 80)) {
-          _showValidationError('maximum_age_must_be_between_13_and_80'.tr);
+        if (maxAge != null && (maxAge < 13 || maxAge > 100)) {
+          _showValidationError('maximum_age_must_be_between_13_and_100'.tr);
           return false;
         }
 

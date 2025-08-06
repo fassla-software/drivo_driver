@@ -11,6 +11,8 @@ import '../../../common_widgets/app_bar_widget.dart';
 import '../../../util/dimensions.dart';
 import '../../../util/styles.dart';
 import '../../../helper/display_helper.dart';
+import '../../../helper/route_helper.dart';
+import 'carpool_main_map_screen.dart';
 import '../domain/models/simple_trip_model.dart';
 import '../domain/models/simple_passenger_model.dart';
 import '../controllers/simple_trip_map_controller.dart';
@@ -160,6 +162,14 @@ class _SimpleTripMapScreenState extends State<SimpleTripMapScreen>
                       },
                       backgroundColor: Theme.of(context).primaryColor,
                       child: const Icon(Icons.people, color: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    // Open in main map screen button
+                    FloatingActionButton(
+                      heroTag: "openInMainMap",
+                      onPressed: () => _openInMainMapScreen(),
+                      backgroundColor: Colors.orange,
+                      child: const Icon(Icons.map, color: Colors.white),
                     ),
                   ],
                 ),
@@ -854,7 +864,7 @@ class _SimpleTripMapScreenState extends State<SimpleTripMapScreen>
   void _showOtpVerificationDialog(SimplePassengerModel passenger) {
     // تأكد من وجود carpool_trip_id
     if (passenger.carpoolTripId == null || passenger.carpoolTripId!.isEmpty) {
-      showCustomSnackBar('invalid_passenger_data'.tr, isError: true);
+      _showSnackBar('Invalid passenger data', Colors.red, icon: Icons.error);
       return;
     }
 
@@ -863,46 +873,91 @@ class _SimpleTripMapScreenState extends State<SimpleTripMapScreen>
       rideServiceInterface: Get.find(),
     ));
 
-    Get.dialog(
-      Dialog(
-        child: Container(
-          padding: const EdgeInsets.all(Dimensions.paddingSizeLarge),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'verify_passenger'.tr,
-                style: textBold.copyWith(
-                  fontSize: Dimensions.fontSizeLarge,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
-              const SizedBox(height: Dimensions.paddingSizeSmall),
-              Text(
-                passenger.name ?? 'unknown_passenger'.tr,
-                style:
-                    textMedium.copyWith(fontSize: Dimensions.fontSizeDefault),
-              ),
-              const SizedBox(height: Dimensions.paddingSizeLarge),
-              SimpleTripOtpWidget(
-                carpoolTripId: passenger.carpoolTripId!,
-                passengerName: passenger.name ?? 'unknown_passenger'.tr,
-              ),
-              const SizedBox(height: Dimensions.paddingSizeDefault),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Get.back(),
-                      child: Text('cancel'.tr),
-                    ),
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          child: Container(
+            padding: const EdgeInsets.all(Dimensions.paddingSizeLarge),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Verify Passenger',
+                  style: textBold.copyWith(
+                    fontSize: Dimensions.fontSizeLarge,
+                    color: Theme.of(context).primaryColor,
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: Dimensions.paddingSizeSmall),
+                Text(
+                  passenger.name ?? 'Unknown Passenger',
+                  style:
+                      textMedium.copyWith(fontSize: Dimensions.fontSizeDefault),
+                ),
+                const SizedBox(height: Dimensions.paddingSizeLarge),
+                SimpleTripOtpWidget(
+                  carpoolTripId: passenger.carpoolTripId!,
+                  passengerName: passenger.name ?? 'Unknown Passenger',
+                  onShowSnackBar: _showSnackBar,
+                  onCloseDialog: () => Navigator.of(dialogContext).pop(),
+                ),
+                const SizedBox(height: Dimensions.paddingSizeDefault),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: Text('Cancel'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showSnackBar(String message, Color backgroundColor, {IconData icon = Icons.info_outline, Duration duration = const Duration(seconds: 3)}) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 3),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        action: SnackBarAction(
+          label: 'Dismiss',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
         ),
       ),
     );
+  }
+
+  void _openInMainMapScreen() {
+    // Navigate to carpool main map screen with trip data
+    Get.to(() => CarpoolMainMapScreen(carpoolTrip: widget.trip));
   }
 }

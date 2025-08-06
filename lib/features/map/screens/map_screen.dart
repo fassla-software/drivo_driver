@@ -131,10 +131,9 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       ).listen((newLocalData) {
         if (_controller != null && mounted) {
           try {
-
             Get.find<RideController>()
                 .remainingDistance(Get.find<RideController>().tripDetail!.id!);
-      Get.find<LocationController>().getCurrentLocation(callZone: false);
+            Get.find<LocationController>().getCurrentLocation(callZone: false);
 
             _controller!.moveCamera(CameraUpdate.newCameraPosition(
                 CameraPosition(

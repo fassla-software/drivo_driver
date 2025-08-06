@@ -94,7 +94,6 @@ import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/p
 import 'package:ride_sharing_user_app/features/car_polling/domain/services/passenger_review_service.dart';
 import 'package:ride_sharing_user_app/features/car_polling/domain/services/passenger_review_service_interface.dart';
 import 'package:ride_sharing_user_app/features/car_polling/controllers/passenger_review_controller.dart';
-import 'package:ride_sharing_user_app/features/car_polling/controllers/current_trips_controller.dart';
 import 'package:ride_sharing_user_app/features/car_polling/controllers/carpool_trip_map_controller.dart';
 import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/current_trips_repository.dart';
 import 'package:ride_sharing_user_app/features/car_polling/domain/repositories/current_trips_repository_interface.dart';
@@ -313,8 +312,6 @@ Future<Map<String, Map<String, String>>> init() async {
   // Use Get.put() instead of Get.lazyPut() to prevent disposal issues
   Get.put(CarpoolRoutesController(carpoolRoutesServiceInterface: Get.find()));
   Get.put(PassengerReviewController(passengerReviewService: Get.find()));
-  Get.put(CurrentTripsController(currentTripsServiceInterface: Get.find()));
-  // CarpoolTripMapController is created per screen instance with unique tags
 
   // Retrieving localized data
   Map<String, Map<String, String>> languages = {};

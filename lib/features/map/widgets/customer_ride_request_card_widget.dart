@@ -442,6 +442,166 @@ class _CustomerRideRequestCardWidgetState
                                     ],
                                   ),
                                 ),
+                                // معلومات الوقت والمسافة
+                                if (widget.rideRequest.estimatedTime != null ||
+                                    widget.rideRequest.estimatedDistance !=
+                                        null)
+                                  Container(
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: Dimensions.paddingSizeDefault,
+                                      vertical: Dimensions.paddingSizeSmall,
+                                    ),
+                                    padding: const EdgeInsets.all(
+                                        Dimensions.paddingSizeDefault),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Theme.of(context)
+                                              .primaryColor
+                                              .withValues(alpha: 0.1),
+                                          Theme.of(context)
+                                              .primaryColor
+                                              .withValues(alpha: 0.05),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(15),
+                                      border: Border.all(
+                                        color: Theme.of(context)
+                                            .primaryColor
+                                            .withValues(alpha: 0.2),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        if (widget.rideRequest.estimatedTime !=
+                                            null) ...[
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Theme.of(context)
+                                                      .primaryColor,
+                                                  Theme.of(context)
+                                                      .primaryColor
+                                                      .withValues(alpha: 0.8),
+                                                ],
+                                              ),
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Theme.of(context)
+                                                      .primaryColor
+                                                      .withValues(alpha: 0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Icon(
+                                              Icons.access_time,
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'estimated_time'.tr,
+                                                style: textRegular.copyWith(
+                                                  fontSize:
+                                                      Dimensions.fontSizeSmall,
+                                                  color: Theme.of(context)
+                                                      .primaryColor
+                                                      .withValues(alpha: 0.7),
+                                                ),
+                                              ),
+                                              Text(
+                                                '${widget.rideRequest.estimatedTime!} ${'min'.tr}',
+                                                style: textBold.copyWith(
+                                                  fontSize:
+                                                      Dimensions.fontSizeLarge,
+                                                  color: Theme.of(context)
+                                                      .primaryColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                        if (widget.rideRequest.estimatedTime !=
+                                                null &&
+                                            widget.rideRequest
+                                                    .estimatedDistance !=
+                                                null)
+                                          const SizedBox(width: 20),
+                                        if (widget.rideRequest
+                                                .estimatedDistance !=
+                                            null) ...[
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Theme.of(context)
+                                                      .primaryColor,
+                                                  Theme.of(context)
+                                                      .primaryColor
+                                                      .withValues(alpha: 0.8),
+                                                ],
+                                              ),
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Theme.of(context)
+                                                      .primaryColor
+                                                      .withValues(alpha: 0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Icon(
+                                              Icons.directions_car,
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'estimated_distance'.tr,
+                                                style: textRegular.copyWith(
+                                                  fontSize:
+                                                      Dimensions.fontSizeSmall,
+                                                  color: Theme.of(context)
+                                                      .primaryColor
+                                                      .withValues(alpha: 0.7),
+                                                ),
+                                              ),
+                                              Text(
+                                                '${widget.rideRequest.estimatedDistance!} ${'km'.tr}',
+                                                style: textBold.copyWith(
+                                                  fontSize:
+                                                      Dimensions.fontSizeLarge,
+                                                  color: Theme.of(context)
+                                                      .primaryColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
                                 RouteWidget(
                                   fromCard: true,
                                   pickupAddress:
@@ -1471,6 +1631,163 @@ class _CustomerRideRequestCardWidgetState
                                   ],
                                 ),
                               ),
+                              // معلومات الوقت والمسافة للقائمة
+                              if (widget.rideRequest.estimatedTime != null ||
+                                  widget.rideRequest.estimatedDistance != null)
+                                Container(
+                                  padding: const EdgeInsets.all(
+                                      Dimensions.paddingSizeDefault),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Theme.of(context)
+                                            .primaryColor
+                                            .withValues(alpha: 0.1),
+                                        Theme.of(context)
+                                            .primaryColor
+                                            .withValues(alpha: 0.05),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(15),
+                                    border: Border.all(
+                                      color: Theme.of(context)
+                                          .primaryColor
+                                          .withValues(alpha: 0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      if (widget.rideRequest.estimatedTime !=
+                                          null) ...[
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                Theme.of(context).primaryColor,
+                                                Theme.of(context)
+                                                    .primaryColor
+                                                    .withValues(alpha: 0.8),
+                                              ],
+                                            ),
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Theme.of(context)
+                                                    .primaryColor
+                                                    .withValues(alpha: 0.3),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            Icons.access_time,
+                                            size: 18,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'time'.tr,
+                                              style: textRegular.copyWith(
+                                                fontSize:
+                                                    Dimensions.fontSizeSmall,
+                                                color: Theme.of(context)
+                                                    .primaryColor
+                                                    .withValues(alpha: 0.7),
+                                              ),
+                                            ),
+                                            Text(
+                                              '${widget.rideRequest.estimatedTime!} ${'min'.tr}',
+                                              style: textBold.copyWith(
+                                                fontSize:
+                                                    Dimensions.fontSizeLarge,
+                                                color: Theme.of(context)
+                                                    .primaryColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                      Spacer(),
+                                      if (widget.rideRequest.estimatedTime !=
+                                              null &&
+                                          widget.rideRequest
+                                                  .estimatedDistance !=
+                                              null)
+                                        const SizedBox(width: 20),
+                                      if (widget
+                                              .rideRequest.estimatedDistance !=
+                                          null) ...[
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                Theme.of(context).primaryColor,
+                                                Theme.of(context)
+                                                    .primaryColor
+                                                    .withValues(alpha: 0.8),
+                                              ],
+                                            ),
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Theme.of(context)
+                                                    .primaryColor
+                                                    .withValues(alpha: 0.3),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            Icons.directions_car,
+                                            size: 18,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              overflow: TextOverflow.ellipsis,
+                                              'distance'.tr,
+                                              style: textRegular.copyWith(
+                                                fontSize:
+                                                    Dimensions.fontSizeSmall,
+                                                color: Theme.of(context)
+                                                    .primaryColor
+                                                    .withValues(alpha: 0.7),
+                                              ),
+                                            ),
+                                            Text(
+                                              '${widget.rideRequest.estimatedDistance!} ${'km'.tr}',
+                                              style: textBold.copyWith(
+                                                fontSize:
+                                                    Dimensions.fontSizeLarge,
+                                                color: Theme.of(context)
+                                                    .primaryColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                      const SizedBox(width: 40),
+                                    ],
+                                  ),
+                                ),
+                              SizedBox(height: 10),
                               RouteWidget(
                                 fromCard: true,
                                 pickupAddress:

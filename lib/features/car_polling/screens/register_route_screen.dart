@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../common_widgets/app_bar_widget.dart';
@@ -27,6 +28,18 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
       body: GetBuilder<RegisterRouteController>(
         init: Get.find<RegisterRouteController>(),
         builder: (controller) {
+          // Set the snackbar callback
+          controller.onShowSnackBar = (message, backgroundColor,
+              {icon = Icons.info_outline,
+              duration = const Duration(seconds: 3)}) {
+            _showSnackBar(
+              message: message,
+              backgroundColor: backgroundColor,
+              icon: icon,
+              duration: duration,
+            );
+          };
+
           try {
             return Stack(
               children: [
@@ -105,6 +118,12 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
                                         controller.seatsController,
                                         TextInputType.number,
                                         icon: Icons.airline_seat_recline_normal,
+                                        hint: '1-50',
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter
+                                              .digitsOnly,
+                                          LengthLimitingTextInputFormatter(2),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -127,7 +146,12 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
                                 _buildEnhancedDropdown(
                                   'ride_type'.tr,
                                   controller.rideType,
-                                  ['work', 'leisure', 'business'],
+                                  [
+                                    'work',
+                                    'college',
+                                    'transportation',
+                                    'governorates traveling',
+                                  ],
                                   controller.setRideType,
                                   Icons.work,
                                 ),
@@ -139,6 +163,12 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
                                         controller.minAgeController,
                                         TextInputType.number,
                                         icon: Icons.person,
+                                        hint: '13-100',
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter
+                                              .digitsOnly,
+                                          LengthLimitingTextInputFormatter(3),
+                                        ],
                                       ),
                                     ),
                                     const SizedBox(
@@ -149,6 +179,12 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
                                         controller.maxAgeController,
                                         TextInputType.number,
                                         icon: Icons.person,
+                                        hint: '13-100',
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter
+                                              .digitsOnly,
+                                          LengthLimitingTextInputFormatter(3),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -434,6 +470,7 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
     String? hint,
     IconData? icon,
     Widget? suffix,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeDefault),
@@ -451,6 +488,7 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
           TextField(
             controller: controller,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
             decoration: InputDecoration(
               hintText: hint,
               border: OutlineInputBorder(
@@ -691,6 +729,8 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
   }
 
   void _selectDateTime(RegisterRouteController controller) async {
+    if (!mounted) return;
+
     // Show date picker with improved styling
     final DateTime? date = await showDatePicker(
       context: context,
@@ -750,7 +790,9 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
 
         controller.startTimeController.text =
             DateFormat('yyyy-MM-dd HH:mm:ss').format(selectedDateTime);
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       }
     }
   }
@@ -842,79 +884,128 @@ class _RegisterRouteScreenState extends State<RegisterRouteScreen> {
     );
   }
 
+  void _showSnackBar({
+    required String message,
+    required Color backgroundColor,
+    IconData icon = Icons.info_outline,
+    Duration duration = const Duration(seconds: 3),
+  }) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        duration: duration,
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        action: SnackBarAction(
+          label: 'Dismiss',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
+  }
+
   void _showRouteDataDialog(RegisterRouteController controller) async {
+    if (!mounted) return;
+
     // Generate polyline automatically before showing dialog
     await controller.generateEncodedPolyline();
 
-    Get.dialog(
-      AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.info_outline, color: Theme.of(context).primaryColor),
-            const SizedBox(width: Dimensions.paddingSizeSmall),
-            Text('confirm_route_data'.tr),
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.info_outline,
+                  color: Theme.of(dialogContext).primaryColor),
+              const SizedBox(width: Dimensions.paddingSizeSmall),
+              Text('confirm_route_data'.tr),
+            ],
+          ),
+          content: SizedBox(
+            width: 300,
+            height: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDataRow('starting_point'.tr,
+                      "Lat: ${controller.startLatController.text}, Lng: ${controller.startLngController.text}"),
+                  _buildDataRow('destination'.tr,
+                      "Lat: ${controller.endLatController.text}, Lng: ${controller.endLngController.text}"),
+                  _buildDataRow(
+                      'departure_time'.tr, controller.startTimeController.text),
+                  _buildDataRow('price_per_seat'.tr,
+                      "${controller.priceController.text} EGP"),
+                  // _buildDataRow(
+                  //     'vehicle_id'.tr, controller.vehicleIdController.text),
+                  _buildDataRow(
+                      'available_seats'.tr, controller.seatsController.text),
+                  _buildDataRow('age_range'.tr,
+                      "${controller.minAgeController.text} - ${controller.maxAgeController.text}"),
+                  _buildDataRow('ride_type'.tr, controller.rideType.tr),
+                  _buildDataRow(
+                      'allowed_gender'.tr, controller.allowedGender.tr),
+                  _buildDataRow('features'.tr, _getFeaturesList(controller)),
+                  _buildDataRow(
+                      'rest_stops'.tr, "${controller.restStops.length} stops"),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text('cancel'.tr),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                // Add a small delay to ensure dialog is closed before showing snackbar
+                await Future.delayed(const Duration(milliseconds: 300));
+                // Call the actual registration method
+                controller.registerRoute();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(dialogContext).primaryColor,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.send, size: 18, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text('register_route'.tr,
+                      style: textMedium.copyWith(
+                          fontSize: Dimensions.fontSizeDefault,
+                          color: Colors.white)),
+                ],
+              ),
+            ),
           ],
-        ),
-        content: SizedBox(
-          width: 300,
-          height: 400,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDataRow('starting_point'.tr,
-                    "Lat: ${controller.startLatController.text}, Lng: ${controller.startLngController.text}"),
-                _buildDataRow('destination'.tr,
-                    "Lat: ${controller.endLatController.text}, Lng: ${controller.endLngController.text}"),
-                _buildDataRow(
-                    'departure_time'.tr, controller.startTimeController.text),
-                _buildDataRow('price_per_seat'.tr,
-                    "${controller.priceController.text} EGP"),
-                // _buildDataRow(
-                //     'vehicle_id'.tr, controller.vehicleIdController.text),
-                _buildDataRow(
-                    'available_seats'.tr, controller.seatsController.text),
-                _buildDataRow('age_range'.tr,
-                    "${controller.minAgeController.text} - ${controller.maxAgeController.text}"),
-                _buildDataRow('ride_type'.tr, controller.rideType.tr),
-                _buildDataRow('allowed_gender'.tr, controller.allowedGender.tr),
-                _buildDataRow('features'.tr, _getFeaturesList(controller)),
-                _buildDataRow(
-                    'rest_stops'.tr, "${controller.restStops.length} stops"),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('cancel'.tr),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              // Add a small delay to ensure dialog is closed before showing snackbar
-              await Future.delayed(const Duration(milliseconds: 300));
-              // Call the actual registration method
-              controller.registerRoute();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.send, size: 18, color: Colors.white),
-                const SizedBox(width: 4),
-                Text('register_route'.tr,
-                    style: textMedium.copyWith(
-                        fontSize: Dimensions.fontSizeDefault,
-                        color: Colors.white)),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

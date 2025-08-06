@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/features/car_polling/screens/all_trips_screen.dart';
-import 'package:ride_sharing_user_app/features/car_polling/screens/my_current_trips.dart';
 import 'package:ride_sharing_user_app/features/car_polling/screens/register_route_screen.dart';
 import 'package:ride_sharing_user_app/features/dashboard/controllers/bottom_menu_controller.dart';
 import 'package:ride_sharing_user_app/features/dashboard/domain/models/navigation_model.dart';

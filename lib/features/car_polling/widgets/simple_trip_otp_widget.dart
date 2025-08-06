@@ -3,23 +3,35 @@ import 'package:get/get.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import '../../../util/dimensions.dart';
 import '../../../util/styles.dart';
-import '../../../helper/display_helper.dart';
 import '../controllers/simple_trip_otp_controller.dart';
 
 class SimpleTripOtpWidget extends StatelessWidget {
   final String carpoolTripId;
   final String passengerName;
+  final Function(String message, Color backgroundColor,
+      {IconData icon, Duration duration})? onShowSnackBar;
+  final VoidCallback? onCloseDialog;
 
   const SimpleTripOtpWidget({
     super.key,
     required this.carpoolTripId,
     required this.passengerName,
+    this.onShowSnackBar,
+    this.onCloseDialog,
   });
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<SimpleTripOtpController>(
       builder: (controller) {
+        // Set callbacks for the controller
+        controller.onShowSnackBar = onShowSnackBar;
+        controller.onCloseDialog = onCloseDialog;
+
+        print('=== Widget: Setting callbacks ===');
+        print('=== onShowSnackBar: ${onShowSnackBar != null} ===');
+        print('=== onCloseDialog: ${onCloseDialog != null} ===');
+
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -91,7 +103,10 @@ class SimpleTripOtpWidget extends StatelessWidget {
                         await controller.matchOtp(
                             carpoolTripId, controller.verificationCode);
                       } else {
-                        showCustomSnackBar("pin_code_is_required".tr);
+                        if (onShowSnackBar != null) {
+                          onShowSnackBar!("Pin code is required", Colors.orange,
+                              icon: Icons.warning);
+                        }
                       }
                     },
                     child: controller.isPinVerificationLoading
