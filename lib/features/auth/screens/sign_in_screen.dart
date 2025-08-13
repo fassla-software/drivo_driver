@@ -165,19 +165,27 @@ class _SignInScreenState extends State<SignInScreen>
       curve: Curves.easeInOut,
     ));
 
-    // بدء الرسوم المتحركة
+    // بدء الرسوم المتحركة مع فحص mounted
     _logoAnimationController.forward();
     Future.delayed(const Duration(milliseconds: 300), () {
-      _titleAnimationController.forward();
+      if (mounted) {
+        _titleAnimationController.forward();
+      }
     });
     Future.delayed(const Duration(milliseconds: 600), () {
-      _formAnimationController.forward();
+      if (mounted) {
+        _formAnimationController.forward();
+      }
     });
     Future.delayed(const Duration(milliseconds: 900), () {
-      _buttonAnimationController.forward();
+      if (mounted) {
+        _buttonAnimationController.forward();
+      }
     });
     Future.delayed(const Duration(milliseconds: 1200), () {
-      _footerAnimationController.forward();
+      if (mounted) {
+        _footerAnimationController.forward();
+      }
     });
 
     if (Get.find<AuthController>().getUserNumber().isNotEmpty) {

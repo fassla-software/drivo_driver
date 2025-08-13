@@ -114,55 +114,47 @@ class _SplashScreenState extends State<SplashScreen>
           PusherHelper.initilizePusher();
         }
 
-        if (Get.find<AuthController>().getZoneId() == '') {
-          Get.offAll(() => const AccessLocationScreen());
-        } else {
-          Get.find<AuthController>().updateToken();
-          Future.delayed(const Duration(milliseconds: 1000), () {
-            if (Get.find<AuthController>().isLoggedIn()) {
-              Get.find<OutOfZoneController>().getZoneList();
-              Get.find<ProfileController>().getProfileInfo().then((value) {
-                if (value.statusCode == 200) {
-                  Get.find<LocationController>()
-                      .getCurrentLocation()
-                      .then((value) {
-                    if (widget.notificationData != null) {
-                      NotificationHelper.notificationToRoute(
-                          widget.notificationData!,
-                          formSplash: true,
-                          userName: widget.userName);
-                    } else {
-                      Get.offAll(() => const DashboardScreen());
-                    }
-                  });
-                  PusherHelper()
-                      .driverTripRequestSubscribe(value.body['data']['id']);
+        Get.find<AuthController>().updateToken();
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (Get.find<AuthController>().isLoggedIn()) {
+            Get.find<OutOfZoneController>().getZoneList();
+            Get.find<ProfileController>().getProfileInfo().then((value) {
+              if (value.statusCode == 200) {
+                if (widget.notificationData != null) {
+                  NotificationHelper.notificationToRoute(
+                      widget.notificationData!,
+                      formSplash: true,
+                      userName: widget.userName);
+                } else {
+                  Get.offAll(() => const DashboardScreen());
                 }
-              });
-            } else {
-              if (Get.find<SplashController>().config!.maintenanceMode !=
-                      null &&
-                  Get.find<SplashController>()
-                          .config!
-                          .maintenanceMode!
-                          .maintenanceStatus ==
-                      1 &&
-                  Get.find<SplashController>()
-                          .config!
-                          .maintenanceMode!
-                          .selectedMaintenanceSystem!
-                          .driverApp ==
-                      1) {
-                Get.offAll(() => const MaintenanceScreen());
-              } else {
-                Get.offAll(() => const SignInScreen()
-
-                    // const RecordManger()
-                    );
+                PusherHelper()
+                    .driverTripRequestSubscribe(value.body['data']['id']);
               }
+            });
+          } else {
+            if (Get.find<SplashController>().config!.maintenanceMode !=
+                    null &&
+                Get.find<SplashController>()
+                        .config!
+                        .maintenanceMode!
+                        .maintenanceStatus ==
+                    1 &&
+                Get.find<SplashController>()
+                        .config!
+                        .maintenanceMode!
+                        .selectedMaintenanceSystem!
+                        .driverApp ==
+                    1) {
+              Get.offAll(() => const MaintenanceScreen());
+            } else {
+              Get.offAll(() => const SignInScreen()
+
+                  // const RecordManger()
+                  );
             }
-          });
-        }
+          }
+        });
       }
     }
   }

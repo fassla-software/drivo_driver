@@ -10,6 +10,9 @@ import 'package:ride_sharing_user_app/features/profile/controllers/profile_contr
 import 'package:ride_sharing_user_app/features/ride/controllers/ride_controller.dart';
 import 'package:ride_sharing_user_app/features/trip/screens/trip_screen.dart';
 import 'package:ride_sharing_user_app/features/wallet/screens/wallet_screen.dart';
+import 'package:ride_sharing_user_app/features/auth/controllers/auth_controller.dart';
+import 'package:ride_sharing_user_app/features/location/controllers/location_controller.dart';
+import 'package:ride_sharing_user_app/features/location/screens/access_location_screen.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
@@ -22,6 +25,24 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final PageStorageBucket bucket = PageStorageBucket();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLocationPermission();
+  }
+
+  void _checkLocationPermission() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // First request location permission
+      await Get.find<LocationController>().getCurrentLocation();
+      
+      // Then check if zone ID is set
+      if (Get.find<AuthController>().getZoneId() == '') {
+        Get.offAll(() => const AccessLocationScreen());
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
