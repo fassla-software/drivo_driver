@@ -513,7 +513,7 @@ class _CustomerRideRequestCardWidgetState
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                'estimated_time'.tr,
+                                                'time'.tr,
                                                 style: textRegular.copyWith(
                                                   fontSize:
                                                       Dimensions.fontSizeSmall,
@@ -578,7 +578,7 @@ class _CustomerRideRequestCardWidgetState
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                'estimated_distance'.tr,
+                                                'distance'.tr,
                                                 style: textRegular.copyWith(
                                                   fontSize:
                                                       Dimensions.fontSizeSmall,
