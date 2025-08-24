@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -83,6 +86,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     if (_locationSubscription != null) {
       _locationSubscription!.cancel();
     }
+    _interpolationTimer?.cancel();
+    _positionHistory.clear(); // Clear position history
     Get.find<ProfileController>().startLocationRecord();
 
     super.dispose();
@@ -91,11 +96,247 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   StreamSubscription? _locationSubscription;
   Marker? marker;
   GoogleMapController? _controller;
+  Position? _lastPosition;
+  Timer? _interpolationTimer;
+  List<Position> _positionHistory = [];
+  static const int _maxHistorySize = 5;
+  static const double _minMovementThreshold = 2.0; // meters
+  static const double _maxSpeedThreshold = 50.0; // m/s (180 km/h)
 
   Future<Uint8List> getMarker() async {
     ByteData byteData =
         await DefaultAssetBundle.of(context).load(Images.carTop);
     return byteData.buffer.asUint8List();
+  }
+
+  double _calculateBearing(LatLng start, LatLng end) {
+    double startLat = start.latitude * (3.14159 / 180);
+    double startLng = start.longitude * (3.14159 / 180);
+    double endLat = end.latitude * (3.14159 / 180);
+    double endLng = end.longitude * (3.14159 / 180);
+
+    double dLng = endLng - startLng;
+
+    double y = sin(dLng) * cos(endLat);
+    double x = cos(startLat) * sin(endLat) - sin(startLat) * cos(endLat) * cos(dLng);
+
+    double bearing = atan2(y, x);
+    bearing = bearing * (180 / 3.14159);
+    bearing = (bearing + 360) % 360;
+
+    return bearing;
+  }
+
+  Position _filterGPSNoise(Position newPosition) {
+    // Add to position history
+    _positionHistory.add(newPosition);
+    if (_positionHistory.length > _maxHistorySize) {
+      _positionHistory.removeAt(0);
+    }
+    
+    // If we don't have enough history, return the position as is
+    if (_positionHistory.length < 3) {
+      return newPosition;
+    }
+    
+    // Calculate average position from recent history for smoothing
+    double avgLat = _positionHistory.map((p) => p.latitude).reduce((a, b) => a + b) / _positionHistory.length;
+    double avgLng = _positionHistory.map((p) => p.longitude).reduce((a, b) => a + b) / _positionHistory.length;
+    
+    // Check if the new position is too far from the average (potential GPS jump)
+    double distanceFromAverage = Geolocator.distanceBetween(
+      avgLat, avgLng, newPosition.latitude, newPosition.longitude
+    );
+    
+    // If the position seems like a GPS jump, use a weighted average instead
+    if (distanceFromAverage > 20.0 && newPosition.accuracy > 10.0) {
+      // Use weighted average: 70% previous smooth position, 30% new position
+      double smoothLat = avgLat * 0.7 + newPosition.latitude * 0.3;
+      double smoothLng = avgLng * 0.7 + newPosition.longitude * 0.3;
+      
+      return Position(
+        latitude: smoothLat,
+        longitude: smoothLng,
+        timestamp: newPosition.timestamp,
+        accuracy: newPosition.accuracy,
+        altitude: newPosition.altitude,
+        heading: newPosition.heading,
+        speed: newPosition.speed,
+        speedAccuracy: newPosition.speedAccuracy,
+        altitudeAccuracy: newPosition.altitudeAccuracy,
+        headingAccuracy: newPosition.headingAccuracy,
+      );
+    }
+    
+    return newPosition;
+  }
+  
+  bool _shouldUpdatePosition(Position newPosition) {
+    if (_lastPosition == null) return true;
+    
+    // Calculate distance moved
+    double distance = Geolocator.distanceBetween(
+      _lastPosition!.latitude,
+      _lastPosition!.longitude,
+      newPosition.latitude,
+      newPosition.longitude,
+    );
+    
+    // Don't update if movement is too small (reduces jitter)
+    if (distance < _minMovementThreshold) {
+      return false;
+    }
+    
+    // Check for unrealistic speed (potential GPS error)
+    double timeDiff = newPosition.timestamp.difference(_lastPosition!.timestamp).inMilliseconds / 1000.0;
+    if (timeDiff > 0) {
+      double speed = distance / timeDiff;
+      if (speed > _maxSpeedThreshold) {
+        debugPrint('Rejecting position update due to unrealistic speed: ${speed.toStringAsFixed(2)} m/s');
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  void _smoothMoveToPosition(Position fromPosition, Position toPosition, Uint8List imageData) {
+    _interpolationTimer?.cancel();
+    
+    const int steps = 10; // Increased steps for smoother movement
+    const Duration stepDuration = Duration(milliseconds: 100); // 100ms per step (1 second total)
+    int currentStep = 0;
+    
+    // Calculate bearing for smooth camera rotation
+    double startBearing = _calculateBearing(
+      LatLng(fromPosition.latitude, fromPosition.longitude),
+      LatLng(toPosition.latitude, toPosition.longitude)
+    );
+    
+    _interpolationTimer = Timer.periodic(stepDuration, (timer) {
+      if (currentStep >= steps || !mounted) {
+        timer.cancel();
+        updateMarkerAndCircle(toPosition, imageData);
+        // Smooth camera animation with bearing
+        _controller?.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(toPosition.latitude, toPosition.longitude),
+              zoom: 16,
+              bearing: startBearing,
+              tilt: 0,
+            ),
+          ),
+        );
+        return;
+      }
+      
+      double progress = _easeInOutCubic(currentStep / steps); // Smooth easing
+      double lat = fromPosition.latitude + (toPosition.latitude - fromPosition.latitude) * progress;
+      double lng = fromPosition.longitude + (toPosition.longitude - fromPosition.longitude) * progress;
+      
+      Position interpolatedPosition = Position(
+        latitude: lat,
+        longitude: lng,
+        timestamp: DateTime.now(),
+        accuracy: toPosition.accuracy,
+        altitude: toPosition.altitude,
+        heading: toPosition.heading,
+        speed: toPosition.speed,
+        speedAccuracy: toPosition.speedAccuracy,
+        altitudeAccuracy: toPosition.altitudeAccuracy,
+        headingAccuracy: toPosition.headingAccuracy,
+      );
+      
+      updateMarkerAndCircle(interpolatedPosition, imageData);
+      currentStep++;
+    });
+  }
+  
+  // Smooth easing function for better animation
+  double _easeInOutCubic(double t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2;
+  }
+  
+  // Error handling and fallback mechanisms
+  void _handleLocationError(dynamic error, Uint8List imageData) {
+    debugPrint('Handling location error: $error');
+    
+    // Try to get last known position as fallback
+    Geolocator.getLastKnownPosition().then((lastKnownPosition) {
+      if (lastKnownPosition != null && mounted) {
+        debugPrint('Using last known position as fallback');
+        updateMarkerAndCircle(lastKnownPosition, imageData);
+        _lastPosition = lastKnownPosition;
+      } else {
+        // If no last known position, try to restart location stream after delay
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted) {
+            debugPrint('Attempting to restart location stream');
+            _restartLocationStream(imageData);
+          }
+        });
+      }
+    }).catchError((e) {
+      debugPrint('Failed to get last known position: $e');
+      // Final fallback - restart location stream after longer delay
+      Future.delayed(const Duration(seconds: 10), () {
+        if (mounted) {
+          debugPrint('Final fallback: restarting location stream');
+          _restartLocationStream(imageData);
+        }
+      });
+    });
+  }
+  
+  void _restartLocationStream(Uint8List imageData) {
+    try {
+      _locationSubscription?.cancel();
+      _positionHistory.clear(); // Clear history when restarting
+      
+      _locationSubscription = Geolocator.getPositionStream(
+        locationSettings: LocationSettings(
+          accuracy: LocationAccuracy.medium, // Use medium accuracy for fallback
+          distanceFilter: 5, // Slightly larger distance filter
+          timeLimit: Duration(seconds: 5), // Longer timeout
+        ),
+      ).listen((newLocalData) {
+        if (_controller != null && mounted) {
+          try {
+            // Apply GPS noise filtering
+            Position filteredPosition = _filterGPSNoise(newLocalData);
+            
+            // Check if we should update the position
+            if (!_shouldUpdatePosition(filteredPosition)) {
+              return; // Skip this update
+            }
+            
+            Get.find<RideController>()
+                .remainingDistance(Get.find<RideController>().tripDetail!.id!);
+            Get.find<LocationController>().getCurrentLocation(callZone: false);
+
+            if (_lastPosition != null) {
+              _smoothMoveToPosition(_lastPosition!, filteredPosition, imageData);
+            } else {
+              updateMarkerAndCircle(filteredPosition, imageData);
+            }
+            _lastPosition = filteredPosition;
+          } catch (e) {
+            debugPrint('Error in restarted location stream: $e');
+          }
+        }
+      }, onError: (error) {
+        debugPrint('Restarted location stream error: $error');
+        // If restart fails, try again after longer delay
+        Future.delayed(const Duration(seconds: 15), () {
+          if (mounted) {
+            _restartLocationStream(imageData);
+          }
+        });
+      });
+    } catch (e) {
+      debugPrint('Failed to restart location stream: $e');
+    }
   }
 
   void updateMarkerAndCircle(Position? newLocalData, Uint8List imageData) {
@@ -117,6 +358,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     try {
       Uint8List imageData = await getMarker();
       var location = await Geolocator.getCurrentPosition();
+      _lastPosition = location;
       updateMarkerAndCircle(location, imageData);
 
       if (_locationSubscription != null) {
@@ -125,32 +367,47 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
       _locationSubscription = Geolocator.getPositionStream(
         locationSettings: LocationSettings(
-          accuracy: LocationAccuracy.best,
-          distanceFilter: 1,
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 1, // Reduced to 1 meter for more responsive updates
+          timeLimit: Duration(seconds: 3), // Maximum 3 second intervals
         ),
       ).listen((newLocalData) {
         if (_controller != null && mounted) {
           try {
+            // Apply GPS noise filtering
+            Position filteredPosition = _filterGPSNoise(newLocalData);
+            
+            // Check if we should update the position
+            if (!_shouldUpdatePosition(filteredPosition)) {
+              return; // Skip this update
+            }
+            
+            print("start");
             Get.find<RideController>()
                 .remainingDistance(Get.find<RideController>().tripDetail!.id!);
             Get.find<LocationController>().getCurrentLocation(callZone: false);
 
-            _controller!.moveCamera(CameraUpdate.newCameraPosition(
-                CameraPosition(
-                    bearing: 192.8334901395799,
-                    target:
-                        LatLng(newLocalData.latitude, newLocalData.longitude),
-                    tilt: 0,
-                    zoom: 16)));
-
-            updateMarkerAndCircle(newLocalData, imageData);
+            // Smooth interpolation between positions
+            if (_lastPosition != null) {
+              _smoothMoveToPosition(_lastPosition!, filteredPosition, imageData);
+            } else {
+              _controller!.animateCamera(CameraUpdate.newCameraPosition(
+                   CameraPosition(
+                       bearing: 192.8334901395799,
+                       target:
+                           LatLng(filteredPosition.latitude, filteredPosition.longitude),
+                       tilt: 0,
+                       zoom: 16)));
+              updateMarkerAndCircle(filteredPosition, imageData);
+            }
+            _lastPosition = filteredPosition;
           } catch (e) {
             debugPrint('Camera move error: $e');
             // Optionally retry after a delay
             Future.delayed(const Duration(milliseconds: 500), () {
               if (_controller != null && mounted) {
                 try {
-                  _controller!.moveCamera(CameraUpdate.newCameraPosition(
+                  _controller!.animateCamera(CameraUpdate.newCameraPosition(
                       CameraPosition(
                           target: LatLng(
                               newLocalData.latitude, newLocalData.longitude),
@@ -164,6 +421,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
         }
       }, onError: (error) {
         debugPrint('Location stream error: $error');
+        _handleLocationError(error, imageData);
       });
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
