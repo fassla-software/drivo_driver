@@ -155,16 +155,46 @@ class LocationController extends GetxController implements GetxService {
   }
 
   bool lastLocationLoading = false;
+  Timer? _debounceTimer;
+  String? _lastLat, _lastLng, _lastZoneID;
+  
   Future<void> storeLastLocationApi(
       String lat, String lng, String zoneID) async {
-    lastLocationLoading = true;
-    update();
-    Response response =
-        await locationServiceInterface.storeLastLocationApi(lat, lng, zoneID);
-    if (response.statusCode == 200) {
-      lastLocationLoading = false;
-    }
-    update();
+    // Store the latest values
+    _lastLat = lat;
+    _lastLng = lng;
+    _lastZoneID = zoneID;
+    
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+    
+    // Set new timer for debouncing (2 seconds)
+    _debounceTimer = Timer(const Duration(seconds: 2), () async {
+      // Check if a request is already in progress
+      if (lastLocationLoading) {
+        debugPrint('Location API request already in progress, skipping...');
+        return;
+      }
+      
+      if (_lastLat != null && _lastLng != null && _lastZoneID != null) {
+        lastLocationLoading = true;
+        update();
+        try {
+          Response response = await locationServiceInterface.storeLastLocationApi(
+              _lastLat!, _lastLng!, _lastZoneID!);
+          if (response.statusCode == 200) {
+            debugPrint('Location stored successfully');
+          } else {
+            debugPrint('Failed to store location: ${response.statusCode}');
+          }
+        } catch (e) {
+          debugPrint('Error storing location: $e');
+        } finally {
+          lastLocationLoading = false;
+          update();
+        }
+      }
+    });
   }
 
   Future<String> getAddressFromGeocode(LatLng latLng) async {
